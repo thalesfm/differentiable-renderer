@@ -1,82 +1,112 @@
-#include <iostream>
+#include <cmath>
+#include <cstdio>
 #include <armadillo>
 
-using namespace arma;
-
-struct Ray {
-    vec3 orig;
-    vec3 dir;
-};
+const double pi = arma::datum::pi;
+const double inf = arma::datum::inf;
 
 struct RayHit {
-    vec3 point;
-    vec3 normal;
+    arma::vec3 point;
+    arma::vec3 normal;
 };
 
-double closesthit(arma::vec ts)
-{
-    // TODO
-}
+class Shape {
+public:
+    virtual double raycast(arma::vec3 orig, arma::vec3 dir) = 0;
+    virtual arma::vec3 normal(arma::vec3 point) = 0;
+};
 
-struct Sphere {
-    vec3 center;
-    double radius;
+class Sphere : public Shape {
+public:
+    Sphere(arma::vec3 center, double radius)
+      : m_center(center), m_radius(radius)
+    { }
 
-    bool intersect(Ray ray, RayHit *hit)
+    double raycast(arma::vec3 orig, arma::vec3 dir)
     {
-        // Find quadratic roots
-        arma::vec3 orig_(ray.orig - center);
-        arma::vec3 poly;
-        poly(0) = 1.;
-        poly(1) = 2. * arma::dot(orig_, ray.dir);
-        poly(2) = arma::dot(orig_, orig_) - radius*radius;
-        arma::cx_vec cx_roots = arma::roots(poly);
+        orig = orig - m_center;
+        arma::vec3 p;
+        p(0) = 1.;
+        p(1) = 2. * arma::dot(orig, dir);
+        p(2) = arma::dot(orig, orig) - m_radius*m_radius;
+        arma::cx_vec cx_roots = arma::roots(p);
 
         if (!imag(cx_roots).is_zero()) {
-            return false;
+            return inf;
         }
 
-        // Determine closest hit
         arma::vec roots = arma::real(cx_roots);
-        if (!arma::any(roots) > 0.) {
-            return false;
-        }
-
-        double t;
         if (roots(0) > 0. && roots(1) > 0.) {
-            t = arma::min(roots);
+            return arma::min(roots);
         } else if (roots(0) > 0.) {
-            t = roots(0);
+            return roots(0);
+        } else if (roots(1) > 0.) {
+            return roots(1);
         } else {
-            t = roots(1);
+            return inf;
         }
-
-        if (hit == nullptr) {
-            return true;
-        }
-
-        // Fill in hit info
-        hit->point = ray.orig + t*ray.dir;
-        hit->normal = normal(hit->point);
-        return true;
     }
 
     arma::vec3 normal(arma::vec3 point)
     {
-        return arma::normalise(point - center);
+        return arma::normalise(point - m_center);
+    }
+
+private:
+    arma::vec3 m_center;
+    double m_radius;
+};
+
+class Scene {
+public:
+    std::vector<Shape*> m_shapes;
+
+    float raycast(arma::vec3 orig, arma::vec3 dir)
+    {
+        float min_t = inf;
+        for (const auto& shape : m_shapes) {
+            float t = shape->raycast(orig, dir);
+            min_t = std::min(min_t, t);
+        }
+        return min_t;
     }
 };
 
 int main(int argc, const char *argv[])
 {
-    RayHit hit;
-    Ray ray1 {vec3{0., 0., 0.}, normalise(vec3{0.1, 0., 1.})};
-    Ray ray2 {vec3{0., 0., 0.}, vec3{1., 0., 0.}};
-    Sphere sphere {vec3{0., 0., 3.}, 1.};
+    Scene scene;
+    Sphere sphere1(arma::vec3{0., 0., 3.}, 1.);
+    Sphere sphere2(arma::vec3{4., 0., 0.}, 1.);
+    scene.m_shapes.push_back(&sphere1);
+    scene.m_shapes.push_back(&sphere2);
 
-    std::cout << sphere.intersect(ray1, &hit) << std::endl;
-    std::cout << "point:\n" << hit.point << std::endl;
-    std::cout << "normal:\n" << hit.normal << std::endl;
-    std::cout << sphere.intersect(ray2, &hit) << std::endl;
+    arma::vec3 eye {0., 0., 0.};
+    arma::vec3 look {0., 0., 1.};
+    arma::vec3 right {1., 0., 0.};
+    arma::vec3 up {0., 1., 0.};
+    int width = 640;
+    int height = 480;
+    double hfov = pi/2.;
+    double vfov = hfov * height / width;
+    arma::mat depth(height, width);
+
+    depth.fill(4.f);
+    for (int i = 0; i < height; ++i) {
+        for (int j = 0; j < width; ++j) {
+            double ty = i / (double) (height - 1);
+            arma::vec3 vy = (1 - 2*ty)*tan(vfov/2)*up;
+            double tx = j / (double) (width - 1);
+            arma::vec3 vx = (1 - 2*tx)*tan(hfov/2)*right;
+            arma::vec3 dir = arma::normalise(look + vx + vy);
+            double t = scene.raycast(eye, dir);
+            depth(i, j) = std::min(depth(i, j), t);
+        }
+        printf("%g%%\r", 100.*i / height);
+        fflush(stdout);
+    }
+    printf("\n");
+
+    depth.save("depth.csv", arma::csv_ascii);
+
     return 0;
 }
