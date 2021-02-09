@@ -1,4 +1,4 @@
-#include <cmath>
+
 #include <cstdio>
 #include <iostream>
 #include <tuple>
@@ -15,7 +15,7 @@ std::tuple<vec3, vec3> tangents(vec3 normal)
     vec3 e2 {0., 1., 0.};
 
     vec3 tangent;
-    if (dot(e1, normal) < dot(e2, normal)) {
+    if (abs(dot(e1, normal)) < abs(dot(e2, normal))) {
         tangent = normalise(e1 - normal*dot(e1, normal));
     } else {
         tangent = normalise(e2 - normal*dot(e2, normal));
@@ -98,6 +98,31 @@ public:
     virtual double raycast(vec3 orig, vec3 dir) = 0;
     virtual vec3 normal(vec3 point) = 0;
     virtual Material *material() = 0;
+};
+
+class Plane : public Shape {
+public:
+    Plane(vec3 normal, double offset, Material *material)
+     : m_normal(normal), m_offset(offset), m_material(material)
+    { }
+
+    double raycast(vec3 orig, vec3 dir)
+    {
+        double h = dot(orig, m_normal) - m_offset;
+        double t = h / dot(dir, -m_normal);
+        return t >= 0. ? t : inf;
+    }
+
+    vec3 normal(vec3 point)
+    { return m_normal; }
+
+    Material *material()
+    { return m_material; }
+
+private:
+    vec3 m_normal;
+    double m_offset;
+    Material *m_material;
 };
 
 class Sphere : public Shape {
@@ -233,19 +258,21 @@ int main(int argc, const char *argv[])
     Material *white = new DiffuseLambert(color::white);
     Material *emissive = new Emissive(color::white);
     Sphere sphere1(vec3{0., 0., 3.}, 1., red);
-    Sphere sphere2(vec3{1., 1., 5.}, 1., blue);
-    Sphere sphere3(vec3{-103., 0., 3.}, 100., white);
-    Sphere sphere4(vec3{103., 0., 3.}, 100., white);
-    Sphere sphere5(vec3{0., -103., 3.}, 100., white);
-    Sphere sphere6(vec3{0., 103., 3.}, 100., white);
-    Sphere sphere7(vec3{0., 3., 3.}, 1.0, emissive);
+    Sphere sphere2(vec3{1., 1., 4.5}, 1., blue);
+    Sphere sphere3(vec3{0., 3., 3.}, 1.0, emissive);
+    Plane plane1(vec3{1., 0., 0.}, -3., white);
+    Plane plane2(vec3{-1., 0., 0.1}, -3., white);
+    Plane plane3(vec3{0., 1., 0.}, -3., white);
+    Plane plane4(vec3{0., -1., 0.}, -3., white);
+    Plane plane5(vec3{0., 0., -1.}, -6., white);
     scene.m_shapes.push_back(&sphere1);
     scene.m_shapes.push_back(&sphere2);
     scene.m_shapes.push_back(&sphere3);
-    scene.m_shapes.push_back(&sphere4);
-    scene.m_shapes.push_back(&sphere5);
-    scene.m_shapes.push_back(&sphere6);
-    scene.m_shapes.push_back(&sphere7);
+    scene.m_shapes.push_back(&plane1);
+    scene.m_shapes.push_back(&plane2);
+    scene.m_shapes.push_back(&plane3);
+    scene.m_shapes.push_back(&plane4);
+    scene.m_shapes.push_back(&plane5);
 
     vec3 eye {0., 0., 0.};
     vec3 look {0., 0., 1.};
