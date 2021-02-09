@@ -33,42 +33,60 @@ namespace color {
     const vec3 blue {0., 0., 1.};
 };
 
-struct RayHit;
+class Shape;
+class Material;
+
+struct Ray {
+    vec3 orig;
+    vec3 dir;
+};
+
+struct Hit {
+    vec3 point;
+    vec3 normal;
+    Shape *shape;
+    Material *material;
+};
+
+struct Path {
+    std::vector<Ray> rays;
+    std::vector<Hit> hits;
+    vec3 radiance;
+};
 
 class Material {
 public:
     virtual ~Material() { };
-
-    virtual vec3 brdf(vec3 normal, vec3 in, vec3 out)
-    { return {0., 0., 0.}; }
-
-    virtual vec3 emission(vec3 normal, vec3 in, vec3 out)
-    { return {0., 0., 0.}; }
-
-    virtual vec3 sample(vec3 normal)
-    { printf("Material::sample\n"); return {0., 0., 0.}; }
+    virtual bool emissive() = 0;
+    virtual vec3 brdf(vec3 normal, vec3 in, vec3 out) = 0;
+    virtual vec3 emission(vec3 normal, vec3 dir) = 0;
+    virtual vec3 sample(vec3 normal) = 0;
 };
-
-// vec3 polar2cartesian(...);
 
 class DiffuseLambert : public Material {
 public:
-    DiffuseLambert(vec3 color) : m_color(color) { }
+    DiffuseLambert(vec3 color)
+     : m_color(color)
+    { }
 
-    ~DiffuseLambert() { }
+    ~DiffuseLambert()
+    { }
+
+    bool emissive()
+    { return false; }
 
     vec3 brdf(vec3 normal, vec3 in, vec3 out)
     { return m_color / pi; }
+
+    vec3 emission(vec3 normal, vec3 dir)
+    { return vec3 {0., 0., 0.}; }
     
     vec3 sample(vec3 normal)
     {
-        // Double check the math for this
         double theta = acos(sqrt(1 - randu()));
         double phi = 2*pi*randu();
-
         vec3 tangent, bitangent;
         std::tie(tangent, bitangent) = tangents(normal);
-
         double dir_t = cos(phi) * cos(theta);
         double dir_b = sin(phi) * cos(theta);
         double dir_n = sin(theta);
@@ -80,11 +98,20 @@ private:
 
 class Emissive : public Material {
 public:
-    Emissive(vec3 emission) : m_emission(emission) { }
+    Emissive(vec3 emission)
+     : m_emission(emission)
+    { }
 
-    ~Emissive() { }
+    ~Emissive()
+    { }
 
-    vec3 emission(vec3 normal, vec3 in, vec3 out)
+    bool emissive()
+    { return true; }
+
+    vec3 brdf(vec3 normal, vec3 in, vec3 out)
+    { return vec3 {0., 0., 0.}; }
+
+    vec3 emission(vec3 normal, vec3 dir)
     { return m_emission; }
 
     vec3 sample(vec3 normal)
@@ -95,7 +122,7 @@ private:
 
 class Shape {
 public:
-    virtual double raycast(vec3 orig, vec3 dir) = 0;
+    virtual bool intersect(Ray ray, double *t) = 0;
     virtual vec3 normal(vec3 point) = 0;
     virtual Material *material() = 0;
 };
@@ -106,11 +133,15 @@ public:
      : m_normal(normal), m_offset(offset), m_material(material)
     { }
 
-    double raycast(vec3 orig, vec3 dir)
+    bool intersect(Ray ray, double *ot)
     {
-        double h = dot(orig, m_normal) - m_offset;
-        double t = h / dot(dir, -m_normal);
-        return t >= 0. ? t : inf;
+        double h = dot(ray.orig, m_normal) - m_offset;
+        double t = h / dot(ray.dir, -m_normal);
+        if (t <= 0.)
+            return false;
+        if (ot != nullptr)
+            *ot = t;
+        return true;
     }
 
     vec3 normal(vec3 point)
@@ -131,40 +162,37 @@ public:
       : m_center(center), m_radius(radius), m_material(material)
     { }
 
-    double raycast(vec3 orig, vec3 dir)
+    bool intersect(Ray ray, double *ot)
     {
-        orig = orig - m_center;
+        vec3 o = ray.orig - m_center;
         vec3 p;
         p(0) = 1.;
-        p(1) = 2. * dot(orig, dir);
-        p(2) = dot(orig, orig) - m_radius*m_radius;
+        p(1) = 2. * dot(o, ray.dir);
+        p(2) = dot(o, o) - m_radius*m_radius;
         cx_vec cx_roots = roots(p);
-
         if (!imag(cx_roots).is_zero()) {
-            return inf;
+            return false;
         }
-
         vec r_roots = real(cx_roots);
         if (r_roots(0) > 0. && r_roots(1) > 0.) {
-            return arma::min(r_roots);
+            *ot = arma::min(r_roots);
+            return true;
         } else if (r_roots(0) > 0.) {
-            return r_roots(0);
+            *ot = r_roots(0);
+            return true;
         } else if (r_roots(1) > 0.) {
-            return r_roots(1);
+            *ot = r_roots(1);
+            return true;
         } else {
-            return inf;
+            return false;
         }
     }
 
     vec3 normal(vec3 point)
-    {
-        return normalise(point - m_center);
-    }
+    { return normalise(point - m_center); }
 
     Material *material()
-    {
-        return m_material;
-    }
+    { return m_material; }
 
 private:
     vec3 m_center;
@@ -176,79 +204,73 @@ class Scene {
 public:
     std::vector<Shape*> m_shapes;
 
-    float raycast(vec3 orig, vec3 dir, RayHit *hit);
-};
-
-struct RayHit {
-    vec3 point;
-    vec3 normal;
-    Shape *shape;
-    Material *material;
-};
-
-struct RayBounce {
-    vec3 in;
-    vec3 out;
-    vec3 normal;
-    Material *material;
-};
-
-float Scene::raycast(vec3 orig, vec3 dir, RayHit *hit)
-{
-    float closest_t = inf;
-    for (const auto& shape : m_shapes) {
-        float t = shape->raycast(orig, dir);
-        if (t >= closest_t) {
-            continue;
+    bool raycast(Ray ray, Hit *hit)
+    {
+        Shape *shape_hit;
+        double tmin = inf;
+        for (auto& shape : m_shapes) {
+            double t;
+            if (shape->intersect(ray, &t) && t < tmin) {
+                shape_hit = shape;
+                tmin = t;
+            }
         }
-        if (hit != nullptr) {
-            closest_t = t;
-            hit->point = orig + t*dir;
-            hit->normal = shape->normal(hit->point);
-            hit->shape = shape;
-            hit->material = shape->material();
-        }
-    }
-    return closest_t;
-}
-
-template <typename OutputIt>
-bool pathtrace(Scene& scene, vec3 orig, vec3 dir, OutputIt path, vec3 *emission) {
-    // For num. bounces
-    for (int i = 0; i < 3; ++i) {
-        RayHit hit;
-        double t = scene.raycast(orig, dir, &hit);
-        if (std::isinf(t)) {
+        if (shape_hit == nullptr) {
             return false;
         }
-        vec3 e = hit.material->emission(hit.normal, -dir, vec3 {0., 0., 0.});
-        if (e.is_zero()) {
-            vec3 out = hit.material->sample(hit.normal);
-            RayBounce bounce;
-            bounce.in = dir;
-            bounce.out = out;
-            bounce.normal = hit.normal;
-            bounce.material = hit.material;
-            *path++ = bounce;
-            orig = orig + (t + 1e-3)*dir;
-            dir = out;
-        } else {
-            *emission = e;
+        if (hit != nullptr) {
+            hit->point = ray.orig + tmin*ray.dir;
+            hit->normal = shape_hit->normal(hit->point);
+            hit->shape = shape_hit;
+            hit->material = shape_hit->material();
+        }
+        return true;
+    }
+};
+
+bool pathtrace(Scene& scene, Ray ray, Path *path, int bounces = 2)
+{
+    *path = Path { };
+    for (int i = 0; i < bounces+1; ++i) {
+        path->rays.push_back(ray);
+        Hit hit;
+        if (!scene.raycast(ray, &hit)) {
+            return false;
+        }
+        if (hit.material->emissive()) {
+            path->radiance = hit.material->emission(hit.normal, -ray.dir);
             return true;
         }
+        path->hits.push_back(hit);
+        vec3 orig = hit.point + 1e-3*hit.normal;
+        vec3 dir = hit.material->sample(hit.normal);
+        ray = Ray {orig, dir};
     }
     return false;
 }
 
-vec3 forward(std::vector<RayBounce>& path, vec3 radiance)
+vec3 forward(Path& path)
 {
-    for (auto it = path.rbegin(); it != path.rend(); ++it) {
-        RayBounce bounce = *it;
-        vec3 brdf = bounce.material->brdf(bounce.normal, -bounce.in, bounce.out);
-        radiance = brdf%radiance;
+    vec3 radiance = path.radiance;
+    for (int i = path.hits.size()-1; i >= 0; --i) {
+        Hit hit = path.hits[i];
+        vec3 in = path.rays[i].dir;
+        vec3 out = path.rays[i+1].dir;
+        vec3 brdf = hit.material->brdf(hit.normal, -in, out);
+        radiance = brdf % radiance;
     }
     return radiance;
 }
+
+/*
+vec3 bounces(std::vector<RayBounce>& path, vec3 radiance)
+{
+    double r = path.size() >= 1;
+    double g = path.size() >= 2;
+    double b = path.size() >= 3;
+    return vec3 {r, g, b};
+}
+*/
 
 int main(int argc, const char *argv[])
 {
@@ -292,27 +314,28 @@ int main(int argc, const char *argv[])
             double t = j / (double) (width - 1);
             vec3 dx = -(1 - 2*t)*tan(hfov/2)*right;
             vec3 dir = normalise(look + dx + dy);
+            Ray ray {eye, dir};
             vec3 color {0., 0., 0.};
 
-            for (int k = 0; k < 4; ++k) {
-                std::vector<RayBounce> path;
-                vec3 radiance;
-                bool ret = pathtrace(scene, eye, dir, std::back_inserter(path), &radiance);
-                if (ret) {
-                    color += forward(path, radiance) / 4;
+            const int n_samples = 100;
+            for (int k = 0; k < n_samples; ++k) {
+                Path path;
+                if (!pathtrace(scene, ray, &path)) {
+                    continue;
                 }
+                color += forward(path) / n_samples;
             }
 
             image.tube(i, j) = color;
         }
-        printf("%g%%\r", 100.*(i+1)/height);
+        printf("% 6.2f%%\r", 100.*(i+1)/height);
         fflush(stdout);
     }
     printf("\n");
 
-    image.slice(0).save("out_r.csv", csv_ascii);
-    image.slice(1).save("out_g.csv", csv_ascii);
-    image.slice(2).save("out_b.csv", csv_ascii);
+    image.slice(0).save("out2_r.csv", csv_ascii);
+    image.slice(1).save("out2_g.csv", csv_ascii);
+    image.slice(2).save("out2_b.csv", csv_ascii);
 
     return 0;
 }
