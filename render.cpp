@@ -228,6 +228,60 @@ public:
     }
 };
 
+class Camera {
+public:
+    Camera(int width,
+           int height,
+           double vfov = 1.3963,
+           vec3 eye = vec3 {0., 0., 0.},
+           vec3 forward = vec3 {0., 0., 1.},
+           vec3 right = vec3 {1., 0., 0.},
+           vec3 up = vec3 {0., 1., 0.})
+     : m_width(width)
+     , m_height(height)
+     , m_vfov(vfov)
+     , m_eye(eye)
+     , m_forward(forward)
+     , m_right(right)
+     , m_up(up)
+    { }
+
+    void look_at(vec3 eye, vec3 at, vec3 up)
+    {
+        m_eye = eye;
+        m_forward = normalise(at - eye);
+        m_right = normalise(cross(m_forward, up));
+        m_up = cross(m_right, m_forward);
+    }
+
+    int width() const
+    { return m_width; }
+
+    int height() const
+    { return m_height; }
+
+    double aspect() const
+    { return double(m_width) / m_height; }
+
+    Ray pix2ray(double x, double y)
+    {
+        double s = x / m_width;
+        double t = y / m_height;
+        vec3 dir = m_forward;
+        dir += (2.*s - 1.) * aspect() * tan(m_vfov / 2.) * m_right;
+        dir += (2.*t - 1.) * tan(m_vfov / 2.) * -m_up;
+        return Ray {m_eye, normalise(dir)};
+    }
+private:
+    int m_width;
+    int m_height;
+    double m_vfov;
+    vec3 m_eye;
+    vec3 m_forward;
+    vec3 m_right;
+    vec3 m_up;
+};
+
 bool pathtrace(Scene& scene, Ray ray, Path *path, int bounces = 2)
 {
     *path = Path { };
@@ -314,28 +368,14 @@ int main(int argc, const char *argv[])
     scene.m_shapes.push_back(&plane4);
     scene.m_shapes.push_back(&plane5);
 
-    vec3 eye {0., 0., 0.};
-    vec3 look {0., 0., 1.};
-    vec3 right {1., 0., 0.};
-    vec3 up {0., 1., 0.};
-    int width = 640;
-    int height = 480;
-    double hfov = pi/2.;
-    double vfov = hfov * height / width;
-    cube image(height, width, 3);
+    Camera cam(640, 480);
+    cube img(480, 640, 3);
+    const int n_samples = 4;
 
-    for (int i = 0; i < height; ++i) {
-        double t = i / (double) (height - 1);
-        vec3 dy = (1 - 2*t)*tan(vfov/2)*up;
-
-        for (int j = 0; j < width; ++j) {
-            double t = j / (double) (width - 1);
-            vec3 dx = -(1 - 2*t)*tan(hfov/2)*right;
-            vec3 dir = normalise(look + dx + dy);
-            Ray ray {eye, dir};
+    for (int y = 0; y < cam.height(); ++y) {
+        for (int x = 0; x < cam.width(); ++x) {
+            Ray ray = cam.pix2ray(x, y);
             vec3 color {0., 0., 0.};
-
-            const int n_samples = 100;
             for (int k = 0; k < n_samples; ++k) {
                 Path path;
                 if (!pathtrace(scene, ray, &path)) {
@@ -343,16 +383,15 @@ int main(int argc, const char *argv[])
                 }
                 color += forward(path) / n_samples;
             }
-
-            image.tube(i, j) = color;
+            img.tube(y, x) = color;
         }
-        printf("% 6.2f%%\r", 100.*(i+1)/height);
+        printf("% 5.2f%%\r", 100. * (y+1) / cam.height());
         fflush(stdout);
     }
     printf("\n");
 
     FILE *fp = fopen("out.json", "w");
-    serialize(fp, image);
+    serialize(fp, img);
     fclose(fp);
 
     return 0;
