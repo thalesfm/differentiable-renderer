@@ -262,15 +262,33 @@ vec3 forward(Path& path)
     return radiance;
 }
 
-/*
-vec3 bounces(std::vector<RayBounce>& path, vec3 radiance)
+void serialize(FILE *fp, cube& img)
 {
-    double r = path.size() >= 1;
-    double g = path.size() >= 2;
-    double b = path.size() >= 3;
-    return vec3 {r, g, b};
+    fprintf(fp, "[\n");
+    for (int i = 0; i < img.n_rows; ++i) {
+        fprintf(fp, "  [\n");
+        for (int j = 0; j < img.n_cols; ++j) {
+            fprintf(fp, "    [");
+            for (int k = 0; k < img.n_slices; ++k) {
+                fprintf(fp, "%f", img(i, j, k));
+                if (k != img.n_slices - 1) {
+                    fprintf(fp, ", ");
+                }
+            }
+            fprintf(fp, "]");
+            if (j != img.n_cols - 1) {
+                fprintf(fp, ", ");
+            }
+            fprintf(fp, "\n");
+        }
+        fprintf(fp, "  ]");
+        if (i != img.n_rows - 1) {
+            fprintf(fp, ", ");
+        }
+        fprintf(fp, "\n");
+    }
+    fprintf(fp, "]\n");
 }
-*/
 
 int main(int argc, const char *argv[])
 {
@@ -333,9 +351,9 @@ int main(int argc, const char *argv[])
     }
     printf("\n");
 
-    image.slice(0).save("out2_r.csv", csv_ascii);
-    image.slice(1).save("out2_g.csv", csv_ascii);
-    image.slice(2).save("out2_b.csv", csv_ascii);
+    FILE *fp = fopen("out.json", "w");
+    serialize(fp, image);
+    fclose(fp);
 
     return 0;
 }
