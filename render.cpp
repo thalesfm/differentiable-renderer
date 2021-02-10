@@ -9,22 +9,6 @@ using namespace arma;
 const double pi = datum::pi;
 const double inf = datum::inf;
 
-std::tuple<vec3, vec3> tangents(vec3 normal)
-{
-    vec3 e1 {1., 0., 0.};
-    vec3 e2 {0., 1., 0.};
-
-    vec3 tangent;
-    if (abs(dot(e1, normal)) < abs(dot(e2, normal))) {
-        tangent = normalise(e1 - normal*dot(e1, normal));
-    } else {
-        tangent = normalise(e2 - normal*dot(e2, normal));
-    }
-
-    vec3 bitangent = normalise(cross(normal, tangent));
-    return std::make_tuple(tangent, bitangent);
-}
-
 namespace color {
     const vec3 white {1., 1., 1.};
     const vec3 gray {0.8, 0.8, 0.8};
@@ -35,6 +19,7 @@ namespace color {
 
 class Shape;
 class Material;
+std::tuple<vec3, vec3> tangents(vec3 normal);
 
 struct Ray {
     vec3 orig;
@@ -169,7 +154,13 @@ public:
         p(0) = 1.;
         p(1) = 2. * dot(o, ray.dir);
         p(2) = dot(o, o) - m_radius*m_radius;
-        cx_vec cx_roots = roots(p);
+        cx_vec cx_roots;
+        try {
+            cx_roots = roots(p);
+        } catch (const std::runtime_error& e) {
+            printf("Error in roots.\n");
+            return false;
+        }
         if (!imag(cx_roots).is_zero()) {
             return false;
         }
@@ -282,25 +273,43 @@ private:
     vec3 m_up;
 };
 
-bool pathtrace(Scene& scene, Ray ray, Path *path, int bounces = 2)
+std::tuple<vec3, vec3> tangents(vec3 normal)
+{
+    vec3 e1 {1., 0., 0.};
+    vec3 e2 {0., 1., 0.};
+
+    vec3 tangent;
+    if (abs(dot(e1, normal)) < abs(dot(e2, normal))) {
+        tangent = normalise(e1 - normal*dot(e1, normal));
+    } else {
+        tangent = normalise(e2 - normal*dot(e2, normal));
+    }
+
+    vec3 bitangent = normalise(cross(normal, tangent));
+    return std::make_tuple(tangent, bitangent);
+}
+
+bool pathtrace(Scene& scene, Ray ray, Path *path, double absorb)
 {
     *path = Path { };
-    for (int i = 0; i < bounces+1; ++i) {
-        path->rays.push_back(ray);
+    for (;;) {
+        if (randu() < absorb) {
+            return false;
+        }
         Hit hit;
         if (!scene.raycast(ray, &hit)) {
             return false;
         }
+        path->rays.push_back(ray);
         if (hit.material->emissive()) {
             path->radiance = hit.material->emission(hit.normal, -ray.dir);
             return true;
         }
         path->hits.push_back(hit);
-        vec3 orig = hit.point + 1e-3*hit.normal;
         vec3 dir = hit.material->sample(hit.normal);
+        vec3 orig = hit.point + 1e-3*dir;
         ray = Ray {orig, dir};
     }
-    return false;
 }
 
 vec3 forward(Path& path)
@@ -370,7 +379,8 @@ int main(int argc, const char *argv[])
 
     Camera cam(640, 480);
     cube img(480, 640, 3);
-    const int n_samples = 4;
+    const int n_samples = 100;
+    const double absorb = 1./3.; // 2 bounces on avg.
 
     for (int y = 0; y < cam.height(); ++y) {
         for (int x = 0; x < cam.width(); ++x) {
@@ -378,10 +388,10 @@ int main(int argc, const char *argv[])
             vec3 color {0., 0., 0.};
             for (int k = 0; k < n_samples; ++k) {
                 Path path;
-                if (!pathtrace(scene, ray, &path)) {
+                if (!pathtrace(scene, ray, &path, absorb)) {
                     continue;
                 }
-                color += forward(path) / n_samples;
+                color += forward(path) / (absorb * n_samples);
             }
             img.tube(y, x) = color;
         }
