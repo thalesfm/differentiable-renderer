@@ -1,8 +1,7 @@
-
-#include <cstdio>
-#include <iostream>
+#include <stdio.h>
 #include <tuple>
 #include <armadillo>
+#include <tclap/CmdLine.h>
 
 using namespace arma;
 
@@ -355,16 +354,42 @@ void serialize(FILE *fp, cube& img)
 
 int main(int argc, const char *argv[])
 {
+    int samples;
+    int bounces;
+    std::string output;
+    try {
+        TCLAP::CmdLine cmd("Render a simple scene", ' ', "0.1");
+        TCLAP::ValueArg<int> samples_arg("k", "samples",
+            "Number of samples per pixel", false, 4, "integer");
+        cmd.add(samples_arg);
+        TCLAP::ValueArg<int> bounces_arg("n", "bounces",
+            "Number of light bounces (approx.)", false, 2, "number");
+        cmd.add(bounces_arg);
+        TCLAP::ValueArg<std::string> output_arg("o", "output",
+            "Save output to this file", false, "out.json", "string");
+        cmd.add(output_arg);
+        cmd.parse(argc, argv);
+        samples = samples_arg.getValue();
+        bounces = bounces_arg.getValue();
+        output = output_arg.getValue();
+    } catch (const TCLAP::ArgException& e) {
+        std::cerr << "error: " << e.error()
+                  << " for arg " << e.argId()
+                  << std::endl;
+        return EXIT_FAILURE;
+    }
+
+    // Build test scene
     Scene scene;
     Material *red = new DiffuseLambert(color::red);
-    Material *blue = new DiffuseLambert(color::blue);
+    Material *green = new DiffuseLambert(color::green);
     Material *white = new DiffuseLambert(color::white);
     Material *emissive = new Emissive(color::white);
-    Sphere sphere1(vec3{0., 0., 3.}, 1., red);
-    Sphere sphere2(vec3{1., 1., 4.5}, 1., blue);
+    Sphere sphere1(vec3{0., 0., 3.}, 1., white);
+    Sphere sphere2(vec3{1., 1., 4.5}, 1., white);
     Sphere sphere3(vec3{0., 3., 3.}, 1.0, emissive);
-    Plane plane1(vec3{1., 0., 0.}, -3., white);
-    Plane plane2(vec3{-1., 0., 0.1}, -3., white);
+    Plane plane1(vec3{1., 0., 0.}, -3., red);
+    Plane plane2(vec3{-1., 0., 0.1}, -3., green);
     Plane plane3(vec3{0., 1., 0.}, -3., white);
     Plane plane4(vec3{0., -1., 0.}, -3., white);
     Plane plane5(vec3{0., 0., -1.}, -6., white);
@@ -379,19 +404,18 @@ int main(int argc, const char *argv[])
 
     Camera cam(640, 480);
     cube img(480, 640, 3);
-    const int n_samples = 100;
-    const double absorb = 1./3.; // 2 bounces on avg.
+    double absorb = 1. / (bounces + 1);
 
     for (int y = 0; y < cam.height(); ++y) {
         for (int x = 0; x < cam.width(); ++x) {
             Ray ray = cam.pix2ray(x, y);
             vec3 color {0., 0., 0.};
-            for (int k = 0; k < n_samples; ++k) {
+            for (int k = 0; k < samples; ++k) {
                 Path path;
                 if (!pathtrace(scene, ray, &path, absorb)) {
                     continue;
                 }
-                color += forward(path) / (absorb * n_samples);
+                color += forward(path) / (absorb * samples);
             }
             img.tube(y, x) = color;
         }
@@ -400,7 +424,7 @@ int main(int argc, const char *argv[])
     }
     printf("\n");
 
-    FILE *fp = fopen("out.json", "w");
+    FILE *fp = fopen(output.c_str(), "w");
     serialize(fp, img);
     fclose(fp);
 
