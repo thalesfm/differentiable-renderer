@@ -25,7 +25,100 @@ struct Options {
     double absorb;
 };
 
-class Material;
+class Material {
+public:
+    virtual ~Material() { };
+
+    virtual vec3 sample(vec3 normal) = 0;
+
+    virtual vec3 brdf_pdf(vec3 normal, vec3 dir_in, vec3 dir_out) = 0;
+
+    virtual vec3 emission(vec3 normal, vec3 dir_in) = 0;
+
+    virtual bool pure_emissive() = 0;
+
+    vec3& grad()
+    {
+        return m_grad;
+    }
+private:
+    vec3 m_grad;
+};
+
+std::tuple<vec3, vec3> tangents(vec3 normal);
+
+class DiffuseLambert : public Material {
+public:
+    DiffuseLambert(vec3 color)
+      : m_color(color)
+    { }
+
+    ~DiffuseLambert()
+    { }
+
+    vec3 sample(vec3 normal)
+    {
+        double theta = acos(sqrt(1 - randu()));
+        double phi = 2*pi*randu();
+        vec3 tangent, bitangent;
+        std::tie(tangent, bitangent) = tangents(normal);
+        double dir_t = cos(phi) * cos(theta);
+        double dir_b = sin(phi) * cos(theta);
+        double dir_n = sin(theta);
+        return dir_t*tangent + dir_b*bitangent + dir_n*normal;
+    }
+
+    vec3 brdf_pdf(vec3 normal, vec3 dir_in, vec3 dir_out)
+    {
+        return m_color / pi;
+    }
+
+    vec3 emission(vec3 normal, vec3 dir_in)
+    {
+        return vec3(fill::zeros);
+    }
+    
+    bool pure_emissive()
+    {
+        return false;
+    }
+
+private:
+    vec3 m_color;
+    vec3 m_color_grad;
+};
+
+class Emissive : public Material {
+public:
+    Emissive(vec3 emission)
+     : m_emission(emission)
+    { }
+
+    ~Emissive()
+    { }
+
+    bool pure_emissive()
+    {
+        return true;
+    }
+
+    vec3 brdf_pdf(vec3 normal, vec3 in, vec3 out)
+    {
+        return vec3(fill::zeros);
+    }
+
+    vec3 emission(vec3 normal, vec3 dir)
+    {
+        return m_emission;
+    }
+
+    vec3 sample(vec3 normal)
+    {
+        throw std::runtime_error("Attempt to sample from emissive material");
+    }
+private:
+    vec3 m_emission;
+};
 
 struct Point {
     vec3 pos;
@@ -149,6 +242,7 @@ bool pure_emissive(Point point);
 
 class Path {
 public:
+    virtual ~Path() { }
     virtual vec3 forward() = 0;
     virtual void backward(vec3 weight) = 0;
 };
@@ -184,6 +278,11 @@ public:
         m_next_path = path_trace(m_scene, Ray {point.pos + 1e-3*m_dir_out, m_dir_out}, options);
     }
 
+    ~Scatter()
+    {
+        delete m_next_path;
+    }
+
     vec3 forward()
     {
         return m_brdf_pdf_value % m_next_path->forward();
@@ -191,7 +290,10 @@ public:
 
     void backward(vec3 weight)
     {
-        /* TODO */
+        // TODO: Store m_next_path->forward()
+        // TODO: Consider absorbtion prob.
+        m_point.material->grad() += m_next_path->forward() % weight;
+        m_next_path->backward(m_brdf_pdf_value % weight);
     }
 private:
     Scene& m_scene;
@@ -217,94 +319,11 @@ public:
 
     void backward(vec3 weight)
     {
-        /* TODO */
+        m_point.material->grad() += weight;
     }
 private:
     Point m_point;
     vec3 m_dir_in;
-};
-
-class Material {
-public:
-    virtual ~Material() { };
-    virtual vec3 sample(vec3 normal) = 0;
-    virtual vec3 brdf_pdf(vec3 normal, vec3 in, vec3 out) = 0;
-    virtual vec3 emission(vec3 normal, vec3 dir) = 0;
-    virtual bool pure_emissive() = 0;
-};
-
-std::tuple<vec3, vec3> tangents(vec3 normal);
-
-class DiffuseLambert : public Material {
-public:
-    DiffuseLambert(vec3 color)
-      : m_color(color)
-    { }
-
-    ~DiffuseLambert()
-    { }
-
-    vec3 sample(vec3 normal)
-    {
-        double theta = acos(sqrt(1 - randu()));
-        double phi = 2*pi*randu();
-        vec3 tangent, bitangent;
-        std::tie(tangent, bitangent) = tangents(normal);
-        double dir_t = cos(phi) * cos(theta);
-        double dir_b = sin(phi) * cos(theta);
-        double dir_n = sin(theta);
-        return dir_t*tangent + dir_b*bitangent + dir_n*normal;
-    }
-
-    vec3 brdf_pdf(vec3 normal, vec3 dir_in, vec3 dir_out)
-    {
-        return m_color / pi;
-    }
-
-    vec3 emission(vec3 normal, vec3 dir_in)
-    {
-        return vec3(fill::zeros);
-    }
-    
-    bool pure_emissive()
-    {
-        return false;
-    }
-
-private:
-    vec3 m_color;
-};
-
-class Emissive : public Material {
-public:
-    Emissive(vec3 emission)
-     : m_emission(emission)
-    { }
-
-    ~Emissive()
-    { }
-
-    bool pure_emissive()
-    {
-        return true;
-    }
-
-    vec3 brdf_pdf(vec3 normal, vec3 in, vec3 out)
-    {
-        return vec3(fill::zeros);
-    }
-
-    vec3 emission(vec3 normal, vec3 dir)
-    {
-        return m_emission;
-    }
-
-    vec3 sample(vec3 normal)
-    {
-        throw std::runtime_error("Attempt to sample from emissive material");
-    }
-private:
-    vec3 m_emission;
 };
 
 Path *path_trace(Scene& scene, Ray ray, Options options)
@@ -498,8 +517,12 @@ int main(int argc, const char *argv[])
             for (int k = 0; k < samples; ++k) {
                 Path *path = path_trace(scene, ray, options);
                 color += path->forward() / samples;
+                path->backward(vec3{1., 1., 1.} / samples);
+                delete path;
             }
-            img.tube(y, x) = color;
+            // img.tube(y, x) = color;
+            img.tube(y, x) = red->grad();
+            red->grad() = vec3(fill::zeros);
         }
         printf("% 5.2f%%\r", 100. * (y+1) / cam.height());
         fflush(stdout);
