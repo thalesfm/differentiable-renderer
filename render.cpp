@@ -146,32 +146,26 @@ public:
       : m_center(center), m_radius(radius), m_material(material)
     { }
 
-    bool intersect(Ray ray, double *ot)
+    bool intersect(Ray ray, double *t)
     {
         vec3 o = ray.orig - m_center;
-        vec3 p;
-        p(0) = 1.;
-        p(1) = 2. * dot(o, ray.dir);
-        p(2) = dot(o, o) - m_radius*m_radius;
-        cx_vec cx_roots;
-        try {
-            cx_roots = roots(p);
-        } catch (const std::runtime_error& e) {
-            printf("Error in roots.\n");
+        double a = 1.;
+        double b = 2. * dot(o, ray.dir);
+        double c = dot(o, o) - m_radius*m_radius;
+        double d = b*b - 4.*a*c;
+        if (d < 0.) {
             return false;
         }
-        if (!imag(cx_roots).is_zero()) {
-            return false;
-        }
-        vec r_roots = real(cx_roots);
-        if (r_roots(0) > 0. && r_roots(1) > 0.) {
-            *ot = arma::min(r_roots);
+        double t1 = (-b - sqrt(d)) / (2. * a);
+        double t2 = (-b + sqrt(d)) / (2. * a);
+        if (t1 > 0. && t2 > 0.) {
+            *t = std::min(t1, t2);
             return true;
-        } else if (r_roots(0) > 0.) {
-            *ot = r_roots(0);
+        } else if (t1 > 0.) {
+            *t = t1;
             return true;
-        } else if (r_roots(1) > 0.) {
-            *ot = r_roots(1);
+        } else if (t2 > 0.) {
+            *t = t2;
             return true;
         } else {
             return false;
