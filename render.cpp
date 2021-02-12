@@ -16,102 +16,31 @@ namespace color {
     const vec3 blue {0., 0., 1.};
 };
 
-class Shape;
-class Material;
-std::tuple<vec3, vec3> tangents(vec3 normal);
-
 struct Ray {
     vec3 orig;
     vec3 dir;
 };
 
-struct Hit {
-    vec3 point;
+struct Options {
+    double absorb;
+};
+
+class Material;
+
+struct Point {
+    vec3 pos;
     vec3 normal;
-    Shape *shape;
     Material *material;
 };
 
-struct Path {
-    std::vector<Ray> rays;
-    std::vector<Hit> hits;
-    vec3 radiance;
-};
-
-class Material {
-public:
-    virtual ~Material() { };
-    virtual bool emissive() = 0;
-    virtual vec3 brdf(vec3 normal, vec3 in, vec3 out) = 0;
-    virtual vec3 emission(vec3 normal, vec3 dir) = 0;
-    virtual vec3 sample(vec3 normal) = 0;
-};
-
-class DiffuseLambert : public Material {
-public:
-    DiffuseLambert(vec3 color)
-     : m_color(color)
-    { }
-
-    ~DiffuseLambert()
-    { }
-
-    bool emissive()
-    { return false; }
-
-    vec3 brdf(vec3 normal, vec3 in, vec3 out)
-    { return m_color / pi; }
-
-    vec3 emission(vec3 normal, vec3 dir)
-    { return vec3 {0., 0., 0.}; }
-    
-    vec3 sample(vec3 normal)
-    {
-        double theta = acos(sqrt(1 - randu()));
-        double phi = 2*pi*randu();
-        vec3 tangent, bitangent;
-        std::tie(tangent, bitangent) = tangents(normal);
-        double dir_t = cos(phi) * cos(theta);
-        double dir_b = sin(phi) * cos(theta);
-        double dir_n = sin(theta);
-        return dir_t*tangent + dir_b*bitangent + dir_n*normal;
-    }
-private:
-    vec3 m_color;
-};
-
-class Emissive : public Material {
-public:
-    Emissive(vec3 emission)
-     : m_emission(emission)
-    { }
-
-    ~Emissive()
-    { }
-
-    bool emissive()
-    { return true; }
-
-    vec3 brdf(vec3 normal, vec3 in, vec3 out)
-    { return vec3 {0., 0., 0.}; }
-
-    vec3 emission(vec3 normal, vec3 dir)
-    { return m_emission; }
-
-    vec3 sample(vec3 normal)
-    { printf("Emissive::sample\n"); return {0., 0., 0.}; }
-private:
-    vec3 m_emission;
-};
-
-class Shape {
+class Surface {
 public:
     virtual bool intersect(Ray ray, double *t) = 0;
     virtual vec3 normal(vec3 point) = 0;
     virtual Material *material() = 0;
 };
 
-class Plane : public Shape {
+class Plane : public Surface {
 public:
     Plane(vec3 normal, double offset, Material *material)
      : m_normal(normal), m_offset(offset), m_material(material)
@@ -140,7 +69,7 @@ private:
     Material *m_material;
 };
 
-class Sphere : public Shape {
+class Sphere : public Surface {
 public:
     Sphere(vec3 center, double radius, Material *material)
       : m_center(center), m_radius(radius), m_material(material)
@@ -186,31 +115,229 @@ private:
 
 class Scene {
 public:
-    std::vector<Shape*> m_shapes;
+    std::vector<Surface*> m_surfaces;
 
-    bool raycast(Ray ray, Hit *hit)
+    bool raycast(Ray ray, Point *point)
     {
-        Shape *shape_hit;
+        Surface *surface_hit = nullptr;
         double tmin = inf;
-        for (auto& shape : m_shapes) {
+        for (auto& surface : m_surfaces) {
             double t;
-            if (shape->intersect(ray, &t) && t < tmin) {
-                shape_hit = shape;
+            if (surface->intersect(ray, &t) && t < tmin) {
+                surface_hit = surface;
                 tmin = t;
             }
         }
-        if (shape_hit == nullptr) {
+        if (surface_hit == nullptr) {
             return false;
         }
-        if (hit != nullptr) {
-            hit->point = ray.orig + tmin*ray.dir;
-            hit->normal = shape_hit->normal(hit->point);
-            hit->shape = shape_hit;
-            hit->material = shape_hit->material();
+        if (point != nullptr) {
+            point->pos = ray.orig + tmin*ray.dir;
+            point->normal = surface_hit->normal(point->pos);
+            point->material = surface_hit->material();
         }
         return true;
     }
 };
+
+class Path;
+
+Path *path_trace(Scene& scene, Ray ray, Options options);
+vec3 brdf_pdf_sample(Point point, vec3 dir_in, vec3 *dir_out);
+vec3 emission(Point point, vec3 dir_in);
+bool pure_emissive(Point point);
+
+class Path {
+public:
+    virtual vec3 forward() = 0;
+    virtual void backward(vec3 weight) = 0;
+};
+
+class Miss : public Path {
+public:
+    Miss(Scene& scene, vec3 dir_in, Options options)
+      : m_scene(scene)
+      , m_dir_in(dir_in)
+    { }
+
+    vec3 forward()
+    {
+        return vec3(fill::zeros);
+    }
+
+    void backward(vec3 weight)
+    { }
+private:
+    Scene& m_scene;
+    vec3 m_dir_in;
+};
+
+class Scatter : public Path {
+public:
+    Scatter(Scene& scene, Point point, vec3 dir_in, Options options)
+      : m_scene(scene)
+      , m_point(point)
+      , m_dir_in(dir_in)
+      , m_options(options)
+    {
+        m_brdf_pdf_value = brdf_pdf_sample(m_point, m_dir_in, &m_dir_out);
+        m_next_path = path_trace(m_scene, Ray {point.pos + 1e-3*m_dir_out, m_dir_out}, options);
+    }
+
+    vec3 forward()
+    {
+        return m_brdf_pdf_value % m_next_path->forward();
+    }
+
+    void backward(vec3 weight)
+    {
+        /* TODO */
+    }
+private:
+    Scene& m_scene;
+    Point m_point;
+    vec3 m_dir_in;
+    vec3 m_dir_out;
+    vec3 m_brdf_pdf_value;
+    Path *m_next_path;
+    Options m_options;
+};
+
+class Emission : public Path {
+public:
+    Emission(Scene& scene, Point point, vec3 dir_in, Options options)
+      : m_point(point)
+      , m_dir_in(dir_in)
+    { }
+
+    vec3 forward()
+    {
+        return emission(m_point, m_dir_in);
+    }
+
+    void backward(vec3 weight)
+    {
+        /* TODO */
+    }
+private:
+    Point m_point;
+    vec3 m_dir_in;
+};
+
+class Material {
+public:
+    virtual ~Material() { };
+    virtual vec3 sample(vec3 normal) = 0;
+    virtual vec3 brdf_pdf(vec3 normal, vec3 in, vec3 out) = 0;
+    virtual vec3 emission(vec3 normal, vec3 dir) = 0;
+    virtual bool pure_emissive() = 0;
+};
+
+std::tuple<vec3, vec3> tangents(vec3 normal);
+
+class DiffuseLambert : public Material {
+public:
+    DiffuseLambert(vec3 color)
+      : m_color(color)
+    { }
+
+    ~DiffuseLambert()
+    { }
+
+    vec3 sample(vec3 normal)
+    {
+        double theta = acos(sqrt(1 - randu()));
+        double phi = 2*pi*randu();
+        vec3 tangent, bitangent;
+        std::tie(tangent, bitangent) = tangents(normal);
+        double dir_t = cos(phi) * cos(theta);
+        double dir_b = sin(phi) * cos(theta);
+        double dir_n = sin(theta);
+        return dir_t*tangent + dir_b*bitangent + dir_n*normal;
+    }
+
+    vec3 brdf_pdf(vec3 normal, vec3 dir_in, vec3 dir_out)
+    {
+        return m_color / pi;
+    }
+
+    vec3 emission(vec3 normal, vec3 dir_in)
+    {
+        return vec3(fill::zeros);
+    }
+    
+    bool pure_emissive()
+    {
+        return false;
+    }
+
+private:
+    vec3 m_color;
+};
+
+class Emissive : public Material {
+public:
+    Emissive(vec3 emission)
+     : m_emission(emission)
+    { }
+
+    ~Emissive()
+    { }
+
+    bool pure_emissive()
+    {
+        return true;
+    }
+
+    vec3 brdf_pdf(vec3 normal, vec3 in, vec3 out)
+    {
+        return vec3(fill::zeros);
+    }
+
+    vec3 emission(vec3 normal, vec3 dir)
+    {
+        return m_emission;
+    }
+
+    vec3 sample(vec3 normal)
+    {
+        throw std::runtime_error("Attempt to sample from emissive material");
+    }
+private:
+    vec3 m_emission;
+};
+
+Path *path_trace(Scene& scene, Ray ray, Options options)
+{
+    if (randu() < options.absorb) {
+        return new Miss(scene, ray.dir, options);
+    }
+    Point point;
+    if (!scene.raycast(ray, &point)) {
+        return new Miss(scene, ray.dir, options);
+    }
+    if (pure_emissive(point)) {
+        return new Emission(scene, point, ray.dir, options);
+    }
+    return new Scatter(scene, point, ray.dir, options);
+}
+
+vec3 brdf_pdf_sample(Point point, vec3 dir_in, vec3 *dir_out)
+{
+    Material *material = point.material;
+    *dir_out = material->sample(point.normal);
+    return material->brdf_pdf(point.normal, dir_in, *dir_out);
+}
+
+vec3 emission(Point point, vec3 dir_in)
+{
+    return point.material->emission(point.normal, dir_in);
+}
+
+bool pure_emissive(Point point)
+{
+    return point.material->pure_emissive();
+}
 
 class Camera {
 public:
@@ -282,42 +409,6 @@ std::tuple<vec3, vec3> tangents(vec3 normal)
     return std::make_tuple(tangent, bitangent);
 }
 
-bool pathtrace(Scene& scene, Ray ray, Path *path, double absorb)
-{
-    *path = Path { };
-    for (;;) {
-        if (randu() < absorb) {
-            return false;
-        }
-        Hit hit;
-        if (!scene.raycast(ray, &hit)) {
-            return false;
-        }
-        path->rays.push_back(ray);
-        if (hit.material->emissive()) {
-            path->radiance = hit.material->emission(hit.normal, -ray.dir);
-            return true;
-        }
-        path->hits.push_back(hit);
-        vec3 dir = hit.material->sample(hit.normal);
-        vec3 orig = hit.point + 1e-3*dir;
-        ray = Ray {orig, dir};
-    }
-}
-
-vec3 forward(Path& path)
-{
-    vec3 radiance = path.radiance;
-    for (int i = path.hits.size()-1; i >= 0; --i) {
-        Hit hit = path.hits[i];
-        vec3 in = path.rays[i].dir;
-        vec3 out = path.rays[i+1].dir;
-        vec3 brdf = hit.material->brdf(hit.normal, -in, out);
-        radiance = brdf % radiance;
-    }
-    return radiance;
-}
-
 void serialize(FILE *fp, cube& img)
 {
     fprintf(fp, "[\n");
@@ -387,29 +478,26 @@ int main(int argc, const char *argv[])
     Plane plane3(vec3{0., 1., 0.}, -3., white);
     Plane plane4(vec3{0., -1., 0.}, -3., white);
     Plane plane5(vec3{0., 0., -1.}, -6., white);
-    scene.m_shapes.push_back(&sphere1);
-    scene.m_shapes.push_back(&sphere2);
-    scene.m_shapes.push_back(&sphere3);
-    scene.m_shapes.push_back(&plane1);
-    scene.m_shapes.push_back(&plane2);
-    scene.m_shapes.push_back(&plane3);
-    scene.m_shapes.push_back(&plane4);
-    scene.m_shapes.push_back(&plane5);
+    scene.m_surfaces.push_back(&sphere1);
+    scene.m_surfaces.push_back(&sphere2);
+    scene.m_surfaces.push_back(&sphere3);
+    scene.m_surfaces.push_back(&plane1);
+    scene.m_surfaces.push_back(&plane2);
+    scene.m_surfaces.push_back(&plane3);
+    scene.m_surfaces.push_back(&plane4);
+    scene.m_surfaces.push_back(&plane5);
 
     Camera cam(640, 480);
     cube img(480, 640, 3);
-    double absorb = 1. / (bounces + 1);
+    Options options = {1. / (bounces + 1)};
 
     for (int y = 0; y < cam.height(); ++y) {
         for (int x = 0; x < cam.width(); ++x) {
             Ray ray = cam.pix2ray(x, y);
             vec3 color {0., 0., 0.};
             for (int k = 0; k < samples; ++k) {
-                Path path;
-                if (!pathtrace(scene, ray, &path, absorb)) {
-                    continue;
-                }
-                color += forward(path) / (absorb * samples);
+                Path *path = path_trace(scene, ray, options);
+                color += path->forward() / samples;
             }
             img.tube(y, x) = color;
         }
