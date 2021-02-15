@@ -2,8 +2,11 @@
 #include <tuple>
 #include <armadillo>
 #include <tclap/CmdLine.h>
+#include "args.hpp"
 
 using namespace arma;
+using namespace drt;
+using namespace drt::args;
 
 const double pi = datum::pi;
 const double inf = datum::inf;
@@ -458,28 +461,8 @@ void serialize(FILE *fp, cube& img)
 
 int main(int argc, const char *argv[])
 {
-    int samples;
-    int bounces;
-    std::string output;
-    try {
-        TCLAP::CmdLine cmd("Render a simple scene", ' ', "0.1");
-        TCLAP::ValueArg<int> samples_arg("k", "samples",
-            "Number of samples per pixel", false, 4, "integer");
-        cmd.add(samples_arg);
-        TCLAP::ValueArg<int> bounces_arg("n", "bounces",
-            "Number of light bounces (approx.)", false, 2, "number");
-        cmd.add(bounces_arg);
-        TCLAP::ValueArg<std::string> output_arg("o", "output",
-            "Save output to this file", false, "out.json", "string");
-        cmd.add(output_arg);
-        cmd.parse(argc, argv);
-        samples = samples_arg.getValue();
-        bounces = bounces_arg.getValue();
-        output = output_arg.getValue();
-    } catch (const TCLAP::ArgException& e) {
-        std::cerr << "error: " << e.error()
-                  << " for arg " << e.argId()
-                  << std::endl;
+    Args args;
+    if (!args::parse(argc, argv, &args)) {
         return EXIT_FAILURE;
     }
 
@@ -508,16 +491,16 @@ int main(int argc, const char *argv[])
 
     Camera cam(640, 480);
     cube img(480, 640, 3);
-    Options options = {1. / (bounces + 1)};
+    Options options = {args.absorb_prob};
 
     for (int y = 0; y < cam.height(); ++y) {
         for (int x = 0; x < cam.width(); ++x) {
             Ray ray = cam.pix2ray(x, y);
             vec3 color {0., 0., 0.};
-            for (int k = 0; k < samples; ++k) {
+            for (int k = 0; k < args.samples; ++k) {
                 Path *path = path_trace(scene, ray, options);
-                color += path->forward() / samples;
-                path->backward(vec3{1., 1., 1.} / samples);
+                color += path->forward() / args.samples;
+                path->backward(vec3{1., 1., 1.} / args.samples);
                 delete path;
             }
             // img.tube(y, x) = color;
@@ -529,7 +512,7 @@ int main(int argc, const char *argv[])
     }
     printf("\n");
 
-    FILE *fp = fopen(output.c_str(), "w");
+    FILE *fp = fopen(args.output.c_str(), "w");
     serialize(fp, img);
     fclose(fp);
 
