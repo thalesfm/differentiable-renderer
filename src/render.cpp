@@ -238,7 +238,7 @@ public:
 
 class Path;
 
-Path *path_trace(Scene& scene, Ray ray, Options options);
+Path *path_trace(Scene& scene, Args& args, Ray ray, int depth = 0);
 vec3 brdf_pdf_sample(Point point, vec3 dir_in, vec3 *dir_out);
 vec3 emission(Point point, vec3 dir_in);
 bool pure_emissive(Point point);
@@ -252,7 +252,7 @@ public:
 
 class Miss : public Path {
 public:
-    Miss(Scene& scene, vec3 dir_in, Options options)
+    Miss(Scene& scene, Args& args, vec3 dir_in)
       : m_scene(scene)
       , m_dir_in(dir_in)
     { }
@@ -271,14 +271,13 @@ private:
 
 class Scatter : public Path {
 public:
-    Scatter(Scene& scene, Point point, vec3 dir_in, Options options)
+    Scatter(Scene& scene, Args& args, Point point, vec3 dir_in, int depth)
       : m_scene(scene)
       , m_point(point)
       , m_dir_in(dir_in)
-      , m_options(options)
     {
         m_brdf_pdf_value = brdf_pdf_sample(m_point, m_dir_in, &m_dir_out);
-        m_next_path = path_trace(m_scene, Ray {point.pos + 1e-3*m_dir_out, m_dir_out}, options);
+        m_next_path = path_trace(m_scene, args, Ray {point.pos + 1e-3*m_dir_out, m_dir_out}, depth);
     }
 
     ~Scatter()
@@ -305,12 +304,11 @@ private:
     vec3 m_dir_out;
     vec3 m_brdf_pdf_value;
     Path *m_next_path;
-    Options m_options;
 };
 
 class Emission : public Path {
 public:
-    Emission(Scene& scene, Point point, vec3 dir_in, Options options)
+    Emission(Scene& scene, Args& args, Point point, vec3 dir_in)
       : m_point(point)
       , m_dir_in(dir_in)
     { }
@@ -329,19 +327,19 @@ private:
     vec3 m_dir_in;
 };
 
-Path *path_trace(Scene& scene, Ray ray, Options options)
+Path *path_trace(Scene& scene, Args& args, Ray ray, int depth)
 {
-    if (randu() < options.absorb) {
-        return new Miss(scene, ray.dir, options);
+    if (depth >= args.min_bounces && randu() < args.absorb_prob) {
+        return new Miss(scene, args, ray.dir);
     }
     Point point;
     if (!scene.raycast(ray, &point)) {
-        return new Miss(scene, ray.dir, options);
+        return new Miss(scene, args, ray.dir);
     }
     if (pure_emissive(point)) {
-        return new Emission(scene, point, ray.dir, options);
+        return new Emission(scene, args, point, ray.dir);
     }
-    return new Scatter(scene, point, ray.dir, options);
+    return new Scatter(scene, args, point, ray.dir, depth+1);
 }
 
 vec3 brdf_pdf_sample(Point point, vec3 dir_in, vec3 *dir_out)
@@ -491,21 +489,20 @@ int main(int argc, const char *argv[])
 
     Camera cam(640, 480);
     cube img(480, 640, 3);
-    Options options = {args.absorb_prob};
 
     for (int y = 0; y < cam.height(); ++y) {
         for (int x = 0; x < cam.width(); ++x) {
             Ray ray = cam.pix2ray(x, y);
             vec3 color {0., 0., 0.};
             for (int k = 0; k < args.samples; ++k) {
-                Path *path = path_trace(scene, ray, options);
+                Path *path = path_trace(scene, args, ray);
                 color += path->forward() / args.samples;
                 path->backward(vec3{1., 1., 1.} / args.samples);
                 delete path;
             }
-            // img.tube(y, x) = color;
-            img.tube(y, x) = red->grad();
-            red->grad() = vec3(fill::zeros);
+            img.tube(y, x) = color;
+            // img.tube(y, x) = red->grad();
+            // red->grad() = vec3(fill::zeros);
         }
         printf("% 5.2f%%\r", 100. * (y+1) / cam.height());
         fflush(stdout);

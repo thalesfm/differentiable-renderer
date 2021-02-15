@@ -1,6 +1,6 @@
 IDIR=include
 CC=g++
-CFLAGS=--std=c++11 -I$(IDIR)
+CFLAGS=--std=c++11 -I$(IDIR) $(FLAGS)
 LIBS=-lm -larmadillo
 
 render: src/* include/*
