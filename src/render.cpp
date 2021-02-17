@@ -9,6 +9,7 @@
 #include "pathtracer.hpp"
 #include "scene.hpp"
 #include "shape.hpp"
+#include "write.hpp"
 
 using namespace arma;
 using namespace drt;
@@ -20,7 +21,7 @@ public:
            double vfov = 1.3963,
            vec3 eye = vec3 {0., 0., 0.},
            vec3 forward = vec3 {0., 0., 1.},
-           vec3 right = vec3 {1., 0., 0.},
+           vec3 right = vec3 {-1., 0., 0.},
            vec3 up = vec3 {0., 1., 0.})
      : m_width(width)
      , m_height(height)
@@ -68,34 +69,6 @@ private:
     vec3 m_up;
 };
 
-void serialize(FILE *fp, cube& img)
-{
-    fprintf(fp, "[\n");
-    for (int i = 0; i < img.n_rows; ++i) {
-        fprintf(fp, "  [\n");
-        for (int j = 0; j < img.n_cols; ++j) {
-            fprintf(fp, "    [");
-            for (int k = 0; k < img.n_slices; ++k) {
-                fprintf(fp, "%f", img(i, j, k));
-                if (k != img.n_slices - 1) {
-                    fprintf(fp, ", ");
-                }
-            }
-            fprintf(fp, "]");
-            if (j != img.n_cols - 1) {
-                fprintf(fp, ", ");
-            }
-            fprintf(fp, "\n");
-        }
-        fprintf(fp, "  ]");
-        if (i != img.n_rows - 1) {
-            fprintf(fp, ", ");
-        }
-        fprintf(fp, "\n");
-    }
-    fprintf(fp, "]\n");
-}
-
 int main(int argc, const char *argv[])
 {
     Args args;
@@ -119,10 +92,10 @@ int main(int argc, const char *argv[])
     Material white_mat {&white_brdf, &no_emission_const};
     Material emissive_mat {&black_brdf, &emission_var};
     Sphere sphere1(vec3{0., 0., 3.}, 1.);
-    Sphere sphere2(vec3{1., 1., 4.5}, 1.);
+    Sphere sphere2(vec3{-1., 1., 4.5}, 1.);
     Sphere sphere3(vec3{0., 3., 3.}, 1.);
-    Plane plane1(vec3{1., 0., 0.}, -3.);
-    Plane plane2(vec3{-1., 0., 0.1}, -3.);
+    Plane plane1(vec3{-1., 0., 0.}, -3.);
+    Plane plane2(vec3{1., 0., 0.1}, -3.);
     Plane plane3(vec3{0., 1., 0.}, -3.);
     Plane plane4(vec3{0., -1., 0.}, -3.);
     Plane plane5(vec3{0., 0., -1.}, -6.);
@@ -153,18 +126,18 @@ int main(int argc, const char *argv[])
                 rad->backward(vec3(fill::ones) / args.samples);
                 delete rad;
             }
-            img.tube(y, x) = radiance;
-            // img.tube(y, x) = red->grad();
-            // red->grad() = vec3(fill::zeros);
+            // img.tube(y, x) = radiance;
+            // img.tube(y, x) = red_var.grad();
+            // red_var.grad() = vec3(fill::zeros);
+            img.tube(y, x) = emission_var.grad();
+            emission_var.grad() = vec3(fill::zeros);
         }
         printf("% 5.2f%%\r", 100. * (y+1) / cam.height());
         fflush(stdout);
     }
     printf("\n");
 
-    FILE *fp = fopen(args.output.c_str(), "w");
-    serialize(fp, img);
-    fclose(fp);
+    write_exr(args.output.c_str(), img);
 
     return 0;
 }
