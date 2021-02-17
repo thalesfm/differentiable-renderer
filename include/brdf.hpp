@@ -68,14 +68,14 @@ public:
 
     vec3 sample(vec3 normal, vec3 dir_in, double &pdf) override
     {
-        double theta = acos(sqrt(randu()));
+        double theta = asin(sqrt(randu()));
         double phi = 2*pi*randu();
         vec3 tangent, bitangent;
         std::tie(tangent, bitangent) = make_frame(normal);
-        double dir_t = cos(phi) * cos(theta);
-        double dir_b = sin(phi) * cos(theta);
-        double dir_n = sin(theta);
-        pdf = cos(pi/2 - theta);
+        double dir_t = cos(phi) * sin(theta);
+        double dir_b = sin(phi) * sin(theta);
+        double dir_n = cos(theta);
+        pdf = cos(theta) / pi;
         return dir_t*tangent + dir_b*bitangent + dir_n*normal;
     }
 
