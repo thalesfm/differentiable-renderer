@@ -13,5 +13,3 @@ This will compile the tool using the default release build configuration. On the
 cmake .. -D CMAKE_BUILD_TYPE Debug
 cmake --build . --config Debug
 ```
-
-Additionally, compilation requires the following packages to be installed: libopenblas-dev, liblapack-dev, libarpack2-dev, libsuperlu-dev, libarmadillo-dev, libtclap-dev, libopenexr-dev.

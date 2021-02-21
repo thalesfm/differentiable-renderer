@@ -1,7 +1,7 @@
 #pragma once
 
-#include <OpenEXR/ImfRgba.h>
-#include <OpenEXR/ImfRgbaFile.h>
+#include <ImfRgba.h>
+#include <ImfRgbaFile.h>
 #include <armadillo>
 
 using namespace arma;

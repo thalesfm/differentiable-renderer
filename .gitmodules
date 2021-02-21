@@ -1,0 +1,12 @@
+[submodule "ext/armadillo"]
+	path = ext/armadillo
+	url = https://gitlab.com/conradsnicta/armadillo-code.git
+	branch = 10.2.x
+[submodule "ext/tclap"]
+	path = ext/tclap
+	url = https://git.code.sf.net/p/tclap/code
+	branch = 1.4
+[submodule "ext/openexr"]
+	path = ext/openexr
+	url = https://github.com/AcademySoftwareFoundation/openexr.git
+	branch = RB-2.5

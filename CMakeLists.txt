@@ -1,17 +1,21 @@
 cmake_minimum_required(VERSION 3.5)
 
-project(drt-adjoint)
+project(drt-adjoint CXX)
+
+set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD_REQUIRED True)
+
+set(CMAKE_CONFIGURATION_TYPES "Debug;Release")
 
 if (NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE Release)
 endif()
 
-set(CMAKE_CXX_STANDARD 11)
-set(CMAKE_CXX_STANDARD_REQUIRED True)
-
 add_executable(render src/render.cpp)
-target_include_directories(render PRIVATE include)
+target_include_directories(render PRIVATE include ext/tclap/include)
 target_link_libraries(render PRIVATE m armadillo Half IlmImf)
-target_compile_options(render PRIVATE -Wall -Wpedantic)
 target_compile_options(render PRIVATE "$<$<CONFIG:Debug>:-Og -ggdb>")
 target_compile_options(render PRIVATE "$<$<CONFIG:Release>:-O3>")
+
+add_subdirectory(ext/armadillo)
+add_subdirectory(ext/openexr EXCLUDE_FROM_ALL)
