@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <array>
 #include <initializer_list>
+#include <iostream>
 #include <memory>
 #include <typeinfo>
 #include <type_traits>
@@ -25,8 +26,6 @@ using Vec3f = Vector<float, 3>;
 using Var1f = Vector<float, 1, true>;
 using Var2f = Vector<float, 2, true>;
 using Var3f = Vector<float, 3, true>;
-
-// Vector<T, N> class ----------------------------------------------------------
 
 template <typename T, std::size_t N>
 class Vector<T, N> {
@@ -114,8 +113,6 @@ private:
     std::array<T, N> m_data;
 };
 
-// AutogradNode classes (internal) ---------------------------------------------
-
 namespace internal {
 
 template <typename T, std::size_t N>
@@ -188,13 +185,12 @@ private:
 
 } // namespace internal
 
-// Vector<T, N, true> class ----------------------------------------------------
-
 template <typename T, std::size_t N>
 class Vector<T, N, true> {
 public:
-    Vector(bool requires_grad = false)
-      : Vector(Vector<T, N>(), requires_grad = false) { }
+    // Default constructor assumes requires_grad = true
+    // due to ambiguities related to other constructors
+    Vector() : Vector(Vector<T, N>(), true) { }
 
     explicit Vector(T value, bool requires_grad = false)
       : Vector(Vector<T, N>(value), requires_grad) { }
@@ -267,8 +263,6 @@ private:
     std::shared_ptr<internal::AutogradNode<T, N>> m_ptr;
 };
 
-// Internal helper functions ---------------------------------------------------
-
 namespace internal {
 
 template <typename T, std::size_t N>
@@ -304,55 +298,13 @@ static void backward(Vector<T, N, true>& v, const Vector<T, N>& grad)
 
 } // namespace internal
 
-// Vector<T, N> operators ------------------------------------------------------
-
-template <typename T, std::size_t N>
-static Vector<T, N> operator-(const Vector<T, N>& v)
-{ return T(-1) * v; }
+template <typename T, std::size_t N, bool Ag>
+static Vector<T, N, Ag> operator-(const Vector<T, N, Ag>& v)
+{ return -1 * v; }
 
 template <typename T, std::size_t N>
 static Vector<T, N> operator+(const Vector<T, N>& lhs, const Vector<T, N>& rhs)
 { return Vector<T, N>(lhs) += rhs; }
-
-template <typename T, std::size_t N>
-static Vector<T, N> operator-(const Vector<T, N>& lhs, const Vector<T, N>& rhs)
-{ return Vector<T, N>(lhs) -= rhs; }
-
-template <typename T, std::size_t N>
-static Vector<T, N> operator*(const Vector<T, N>& lhs, const Vector<T, N>& rhs)
-{ return Vector<T, N>(lhs) *= rhs; }
-
-template <typename T, std::size_t N>
-static Vector<T, N> operator*(const Vector<T, N>& v, T s)
-{ return Vector<T, N>(v) *= s; }
-
-template <typename T, std::size_t N>
-static Vector<T, N> operator*(T s, const Vector<T, N>& v)
-{ return Vector<T, N>(v) *= s; }
-
-template <typename T, std::size_t N>
-static Vector<T, N> operator/(const Vector<T, N>& lhs, const Vector<T, N>& rhs)
-{ return Vector<T, N>(lhs) /= rhs; }
-
-template <typename T, std::size_t N>
-static Vector<T, N> operator/(const Vector<T, N>& v, T s)
-{ return Vector<T, N>(v) /= s; }
-
-template <typename T, std::size_t N, bool Ag>
-std::ostream& operator<<(std::ostream& os, const Vector<T, N, Ag>& v)
-{
-    os << "Vector<" << typeid(T).name() << ", " << N;
-    if (Ag)
-        os << ", true";
-    os << "> {";
-    for (std::size_t i = 0; i < v.size()-1; ++i)
-        os << v[i] << ", ";
-    if (v.size() > 0)
-        os << v[v.size()-1];
-    return os << "}";
-}
-
-// Vector<T, N, true> operators ------------------------------------------------
 
 template <typename T, std::size_t N, bool Ag1, bool Ag2,
     typename = typename std::enable_if<Ag1 || Ag2>::type>
@@ -368,6 +320,10 @@ static Vector<T, N, true> operator+(
     });
 }
 
+template <typename T, std::size_t N>
+static Vector<T, N> operator-(const Vector<T, N>& lhs, const Vector<T, N>& rhs)
+{ return Vector<T, N>(lhs) -= rhs; }
+
 template <typename T, std::size_t N, bool Ag1, bool Ag2,
     typename = typename std::enable_if<Ag1 || Ag2>::type>
 static Vector<T, N, true> operator-(
@@ -381,6 +337,20 @@ static Vector<T, N, true> operator-(
         internal::backward(rhs, -grad);
     });
 }
+
+template <typename T, std::size_t N>
+static Vector<T, N> operator*(const Vector<T, N>& lhs, const Vector<T, N>& rhs)
+{ return Vector<T, N>(lhs) *= rhs; }
+
+template <typename T, typename Ts, std::size_t N,
+    typename = typename std::enable_if<std::is_convertible<Ts, T>::value>::type>
+static Vector<T, N> operator*(const Vector<T, N>& v, Ts s)
+{ return Vector<T, N>(v) *= s; }
+
+template <typename T, typename Ts, std::size_t N,
+    typename = typename std::enable_if<std::is_convertible<Ts, T>::value>::type>
+static Vector<T, N> operator*(Ts s, const Vector<T, N>& v)
+{ return Vector<T, N>(v) *= s; }
 
 template <typename T, std::size_t N, bool Ag1, bool Ag2,
     typename = typename std::enable_if<Ag1 || Ag2>::type>
@@ -396,12 +366,14 @@ static Vector<T, N, true> operator*(
     });
 }
 
-template <typename T, std::size_t N>
-static Vector<T, N, true> operator*(Vector<T, N, true> v, T s)
+template <typename T, typename Ts, std::size_t N,
+    typename = typename std::enable_if<std::is_convertible<Ts, T>::value>::type>
+static Vector<T, N, true> operator*(Vector<T, N, true> v, Ts s)
 { return s * v; }
 
-template <typename T, std::size_t N>
-static Vector<T, N, true> operator*(T s, Vector<T, N, true> v)
+template <typename T, typename Ts, std::size_t N,
+    typename = typename std::enable_if<std::is_convertible<Ts, T>::value>::type>
+static Vector<T, N, true> operator*(Ts s, Vector<T, N, true> v)
 {
     Vector<T, N> r = s * v.detach();
     if (!v.requires_grad())
@@ -410,6 +382,15 @@ static Vector<T, N, true> operator*(T s, Vector<T, N, true> v)
         v.backward(s * grad);
     });
 }
+
+template <typename T, std::size_t N>
+static Vector<T, N> operator/(const Vector<T, N>& lhs, const Vector<T, N>& rhs)
+{ return Vector<T, N>(lhs) /= rhs; }
+
+template <typename T, typename Ts, std::size_t N,
+    typename = typename std::enable_if<std::is_convertible<Ts, T>::value>::type>
+static Vector<T, N> operator/(const Vector<T, N>& v, Ts s)
+{ return Vector<T, N>(v) /= T(s); }
 
 template <typename T, std::size_t N, bool Ag1, bool Ag2,
     typename = typename std::enable_if<Ag1 || Ag2>::type>
@@ -426,8 +407,9 @@ static Vector<T, N, true> operator/(
     });
 }
 
-template <typename T, std::size_t N>
-static Vector<T, N, true> operator/(Vector<T, N, true> v, T s)
+template <typename T, typename Ts, std::size_t N,
+    typename = typename std::enable_if<std::is_convertible<Ts, T>::value>::type>
+static Vector<T, N, true> operator/(Vector<T, N, true> v, Ts s)
 {
     Vector<T, N> r = v.detach() / s;
     if (!v.requires_grad())
@@ -435,6 +417,20 @@ static Vector<T, N, true> operator/(Vector<T, N, true> v, T s)
     return Vector<T, N, true>(r, [=](const Vector<T, N>& grad) mutable {
         v.backward(grad / s);
     });
+}
+
+template <typename T, std::size_t N, bool Ag>
+std::ostream& operator<<(std::ostream& os, const Vector<T, N, Ag>& v)
+{
+    os << "Vector<" << typeid(T).name() << ", " << N;
+    if (Ag)
+        os << ", true";
+    os << "> {";
+    for (std::size_t i = 0; i < v.size()-1; ++i)
+        os << v[i] << ", ";
+    if (v.size() > 0)
+        os << v[v.size()-1];
+    return os << "}";
 }
 
 template <typename T, std::size_t N>
