@@ -1,27 +1,25 @@
 #pragma once
 
-#include <armadillo>
-#include "common.hpp"
-
-using namespace arma;
+#include "constants.hpp"
+#include "vector.hpp"
 
 namespace drt {
 
 class Shape {
 public:
     virtual ~Shape() { }
-    virtual bool intersect(vec3 orig, vec3 dir, double& t) = 0;
-    virtual vec3 normal(vec3 point) = 0;
+    virtual bool intersect(Vec3 orig, Vec3 dir, double& t) = 0;
+    virtual Vec3 normal(Vec3 point) = 0;
 };
 
 class Plane : public Shape {
 public:
-    Plane(vec3 normal, double offset)
+    Plane(Vec3 normal, double offset)
       : m_normal(normal)
       , m_offset(offset)
     { }
 
-    bool intersect(vec3 orig, vec3 dir, double& t_)
+    bool intersect(Vec3 orig, Vec3 dir, double& t_)
     {
         double h = dot(orig, m_normal) - m_offset;
         double t = h / dot(dir, -m_normal);
@@ -33,23 +31,22 @@ public:
         }
     }
 
-    vec3 normal(vec3 point)
-    {
-        return m_normal;
-    }
+    Vec3 normal(Vec3 point)
+    { return m_normal; }
+
 private:
-    vec3 m_normal;
+    Vec3 m_normal;
     double m_offset;
 };
 
 class Sphere : public Shape {
 public:
-    Sphere(vec3 center, double radius)
+    Sphere(Vec3 center, double radius)
       : m_center(center)
       , m_radius(radius)
     { }
 
-    bool intersect(vec3 orig, vec3 dir, double& t)
+    bool intersect(Vec3 orig, Vec3 dir, double& t)
     {
         orig -= m_center;
         double a = 1.;
@@ -75,12 +72,11 @@ public:
         }
     }
 
-    vec3 normal(vec3 point)
-    {
-        return normalise(point - m_center);
-    }
+    Vec3 normal(Vec3 point)
+    { return normalize(point - m_center); }
+
 private:
-    vec3 m_center;
+    Vec3 m_center;
     double m_radius;
 };
 

@@ -1,18 +1,14 @@
 #include <stdio.h>
-#include <tuple>
-#include <armadillo>
 #include "args.hpp"
-#include "autograd.hpp"
-#include "brdf.hpp"
+#include "bxdf.hpp"
 #include "camera.hpp"
-#include "common.hpp"
 #include "material.hpp"
 #include "pathtracer.hpp"
 #include "scene.hpp"
 #include "shape.hpp"
+#include "vector.hpp"
 #include "write.hpp"
 
-using namespace arma;
 using namespace drt;
 
 int main(int argc, const char *argv[])
@@ -23,31 +19,31 @@ int main(int argc, const char *argv[])
     }
 
     // Configure scene parameters
-    Variable<rgb> red_var(red);
-    Variable<rgb> green_var(green);
-    Variable<rgb> white_var(white);
-    Variable<rgb> emission_var(white);
-    Constant<rgb> no_emission_const(black);
+    Var3 red_var(red, true);
+    Var3 green_var(green, true);
+    Var3 white_var(white, true);
+    Var3 emission_var(white, true);
 
     // Configure scene materials
-    DiffuseBRDF red_brdf(red_var);
-    DiffuseBRDF green_brdf(green_var);
-    DiffuseBRDF white_brdf(white_var);
-    BlackBRDF black_brdf;
-    Material red_mat {&red_brdf, &no_emission_const};
-    Material green_mat {&green_brdf, &no_emission_const};
-    Material white_mat {&white_brdf, &no_emission_const};
-    Material emissive_mat {&black_brdf, &emission_var};
+    DiffuseBxDF red_bxdf(red_var);
+    DiffuseBxDF green_bxdf(green_var);
+    DiffuseBxDF white_bxdf(white_var);
+    DiffuseBxDF black_bxdf(black);
+
+    Material red_mat {&red_bxdf, black};
+    Material green_mat {&green_bxdf, black};
+    Material white_mat {&white_bxdf, black};
+    Material emissive_mat {&black_bxdf, emission_var};
 
     // Configure scene shapes
-    Sphere sphere1(vec3{0., 0., 3.}, 1.);
-    Sphere sphere2(vec3{-1., 1., 4.5}, 1.);
-    Sphere sphere3(vec3{0., 3., 3.}, 1.);
-    Plane plane1(vec3{-1., 0., 0.}, -3.);
-    Plane plane2(vec3{1., 0., 0.1}, -3.);
-    Plane plane3(vec3{0., 1., 0.}, -3.);
-    Plane plane4(vec3{0., -1., 0.}, -3.);
-    Plane plane5(vec3{0., 0., -1.}, -6.);
+    Sphere sphere1(Vec3 {0., 0., 3.}, 1.);
+    Sphere sphere2(Vec3 {-1., 1., 4.5}, 1.);
+    Sphere sphere3(Vec3 {0., 3., 3.}, 1.);
+    Plane plane1(Vec3 {-1., 0., 0.}, -3.);
+    Plane plane2(Vec3 {1., 0., 0.1}, -3.);
+    Plane plane3(Vec3 {0., 1., 0.}, -3.);
+    Plane plane4(Vec3 {0., -1., 0.}, -3.);
+    Plane plane5(Vec3 {0., 0., -1.}, -6.);
 
     // Build test scene
     Scene scene;
@@ -61,8 +57,10 @@ int main(int argc, const char *argv[])
     scene.add(plane5, white_mat);
 
     // Configure camera position and resolution
-    Camera cam(640, 480);
-    cube img(480, 640, 3);
+    std::size_t width = 640;
+    std::size_t height = 480;
+    Camera cam(width, height);
+    Vec3 *img = new Vec3[width * height];
 
     // Configure path tracer sampling
     Pathtracer tracer(args.absorb_prob, args.min_bounces);
@@ -70,21 +68,20 @@ int main(int argc, const char *argv[])
     // Render test scene
     for (int y = 0; y < cam.height(); ++y) {
         for (int x = 0; x < cam.width(); ++x) {
-            vec3 orig;
-            vec3 dir;
+            Vec3 orig;
+            Vec3 dir;
             cam.pix2ray(x, y, orig, dir);
-            rgb radiance {0., 0., 0.};
+            Vec3 radiance(0);
             for (int k = 0; k < args.samples; ++k) {
-                Autograd<rgb> *rad = tracer.trace(scene, orig, dir);
-                radiance += rad->value() / args.samples;
-                rad->backward(vec3(fill::ones) / args.samples);
-                delete rad;
+                Var3 rad = tracer.trace(scene, orig, dir);
+                radiance += rad.detach() / double(args.samples);
+                rad.backward(Vec3(1) / double(args.samples));
             }
-            // img.tube(y, x) = radiance;
-            // img.tube(y, x) = red_var.grad();
-            // red_var.grad() = vec3(fill::zeros);
-            img.tube(y, x) = emission_var.grad();
-            emission_var.grad() = vec3(fill::zeros);
+            // img[y*width + x] = radiance;
+            img[y*width + x]  = red_var.grad();
+            red_var.grad() = Vec3(0);
+            // img[i*width + j] = emission.detach();
+            // emission_var.grad() = vec3(fill::zeros);
         }
         printf("% 5.2f%%\r", 100. * (y+1) / cam.height());
         fflush(stdout);
@@ -92,7 +89,7 @@ int main(int argc, const char *argv[])
     printf("\n");
 
     // Write radiance to file
-    write_exr(args.output.c_str(), img);
+    write_exr(args.output.c_str(), img, width, height);
 
     return 0;
 }

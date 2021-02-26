@@ -1,17 +1,13 @@
 #pragma once
 
-#include <armadillo>
-#include "autograd.hpp"
-#include "brdf.hpp"
-#include "common.hpp"
-
-using namespace arma;
+#include "bxdf.hpp"
+#include "vector.hpp"
 
 namespace drt {
 
 struct Material {
-    BRDF *brdf;
-    Autograd<rgb> *emission;
+    BxDF *bxdf;
+    Var3 emission;
 };
 
 }

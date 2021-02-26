@@ -2,20 +2,19 @@
 
 #include <ImfRgba.h>
 #include <ImfRgbaFile.h>
-#include <armadillo>
+#include "vector.hpp"
 
-using namespace arma;
+namespace drt {
 
-void write_exr(const char *fname, cube& img)
+static void write_exr(const char *fname, const Vec3 *data,
+    std::size_t width, std::size_t height)
 {
-    size_t width = img.n_cols;
-    size_t height = img.n_rows;
     std::vector<Imf::Rgba> pixels;
     pixels.reserve(width * height);
-    for (size_t i = 0; i < height; ++i) {
-        for (size_t j = 0; j < width; ++j) {
-            vec3 rgb = img.tube(i, j);
-            pixels.emplace_back(rgb(0), rgb(1), rgb(2), 1.);
+    for (std::size_t i = 0; i < height; ++i) {
+        for (std::size_t j = 0; j < width; ++j) {
+            Vec3 rgb = data[i*width + j];
+            pixels.emplace_back(rgb[0], rgb[1], rgb[2], 1.);
         }
     }
     Imf::RgbaOutputFile file(fname, width, height, Imf::WRITE_RGBA);
@@ -23,6 +22,7 @@ void write_exr(const char *fname, cube& img)
     file.writePixels(height);
 }
 
+/*
 void write_json(const char *fname, cube& img)
 {
     FILE *fp = fopen(fname, "w");
@@ -51,4 +51,7 @@ void write_json(const char *fname, cube& img)
     }
     fprintf(fp, "]\n");
     fclose(fp);
+}
+*/
+
 }

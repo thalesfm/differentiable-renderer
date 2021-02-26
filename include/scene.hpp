@@ -3,8 +3,6 @@
 #include "shape.hpp"
 #include "material.hpp"
 
-using namespace arma;
-
 namespace drt {
 
 class Scene {

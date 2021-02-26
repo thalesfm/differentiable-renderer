@@ -8,6 +8,8 @@
 #include <typeinfo>
 #include <type_traits>
 
+namespace drt {
+
 template <typename T, std::size_t N, bool Autograd = false>
 class Vector;
 
@@ -191,17 +193,24 @@ private:
 template <typename T, std::size_t N>
 class Vector<T, N, true> {
 public:
-    Vector()
-      : m_ptr(new internal::VariableNode<T, N>()) { }
+    Vector(bool requires_grad = false)
+      : Vector(Vector<T, N>(), requires_grad = false) { }
 
-    explicit Vector(T value)
-      : m_ptr(new internal::VariableNode<T, N>(value)) { }
+    explicit Vector(T value, bool requires_grad = false)
+      : Vector(Vector<T, N>(value), requires_grad) { }
 
-    Vector(std::initializer_list<T> init)
-      : m_ptr(new internal::VariableNode<T, N>(init)) { }
+    Vector(std::initializer_list<T> init, bool requires_grad = false)
+      : Vector(Vector<T, N>(init), requires_grad) { }
 
-    Vector(const Vector<T, N>& v)
-      : m_ptr(new internal::ConstantNode<T, N>(v)) { }
+    Vector(const Vector<T, N>& v, bool requires_grad = false)
+    {
+        if (requires_grad)
+            m_ptr = std::shared_ptr<internal::AutogradNode<T, N>>(
+                new internal::VariableNode<T, N>(v));
+        else
+            m_ptr = std::shared_ptr<internal::AutogradNode<T, N>>(
+                new internal::ConstantNode<T, N>(v));
+    }
 
     template <typename BackwardThunk>
     Vector(const Vector<T, N>& v, const BackwardThunk& backward)
@@ -218,10 +227,10 @@ public:
     { return N; }
 
     // WARN: Potentially unsafe!
-    Vector<T, N>& no_grad()
+    Vector<T, N>& detach()
     { return *m_ptr; }
 
-    const Vector<T, N>& no_grad() const
+    const Vector<T, N>& detach() const
     { return *m_ptr; }
 
     Vector<T, N>& grad()
@@ -263,20 +272,20 @@ private:
 namespace internal {
 
 template <typename T, std::size_t N>
-static Vector<T, N>& no_grad(Vector<T, N>& v)
+static Vector<T, N>& detach(Vector<T, N>& v)
 { return v; }
 
 template <typename T, std::size_t N>
-static const Vector<T, N>& no_grad(const Vector<T, N>& v)
+static const Vector<T, N>& detach(const Vector<T, N>& v)
 { return v; }
 
 template <typename T, std::size_t N>
-static Vector<T, N>& no_grad(Vector<T, N, true>& v)
-{ return v.no_grad(); }
+static Vector<T, N>& detach(Vector<T, N, true>& v)
+{ return v.detach(); }
 
 template <typename T, std::size_t N>
-static const Vector<T, N>& no_grad(const Vector<T, N, true>& v)
-{ return v.no_grad(); }
+static const Vector<T, N>& detach(const Vector<T, N, true>& v)
+{ return v.detach(); }
 
 template <typename T, std::size_t N>
 static constexpr bool requires_grad(const Vector<T, N>& v)
@@ -350,7 +359,7 @@ template <typename T, std::size_t N, bool Ag1, bool Ag2,
 static Vector<T, N, true> operator+(
     Vector<T, N, Ag1> lhs, Vector<T, N, Ag2> rhs)
 {
-    Vector<T, N> r = internal::no_grad(lhs) + internal::no_grad(rhs);
+    Vector<T, N> r = internal::detach(lhs) + internal::detach(rhs);
     if (!internal::requires_grad(lhs) && !internal::requires_grad(rhs))
         return r;
     return Vector<T, N, true>(r, [=](const Vector<T, N>& grad) mutable {
@@ -364,7 +373,7 @@ template <typename T, std::size_t N, bool Ag1, bool Ag2,
 static Vector<T, N, true> operator-(
     Vector<T, N, Ag1> lhs, Vector<T, N, Ag2> rhs)
 {
-    Vector<T, N> r = internal::no_grad(lhs) - internal::no_grad(rhs);
+    Vector<T, N> r = internal::detach(lhs) - internal::detach(rhs);
     if (!internal::requires_grad(lhs) && !internal::requires_grad(rhs))
         return r;
     return Vector<T, N, true>(r, [=](const Vector<T, N>& grad) mutable {
@@ -378,12 +387,12 @@ template <typename T, std::size_t N, bool Ag1, bool Ag2,
 static Vector<T, N, true> operator*(
     Vector<T, N, Ag1> lhs, Vector<T, N, Ag2> rhs)
 {
-    Vector<T, N> r = internal::no_grad(lhs) * internal::no_grad(rhs);
+    Vector<T, N> r = internal::detach(lhs) * internal::detach(rhs);
     if (!internal::requires_grad(lhs) && !internal::requires_grad(rhs))
         return r;
     return Vector<T, N, true>(r, [=](const Vector<T, N>& grad) mutable {
-        internal::backward(lhs, internal::no_grad(rhs) * grad);
-        internal::backward(rhs, internal::no_grad(lhs) * grad);
+        internal::backward(lhs, internal::detach(rhs) * grad);
+        internal::backward(rhs, internal::detach(lhs) * grad);
     });
 }
 
@@ -394,7 +403,7 @@ static Vector<T, N, true> operator*(Vector<T, N, true> v, T s)
 template <typename T, std::size_t N>
 static Vector<T, N, true> operator*(T s, Vector<T, N, true> v)
 {
-    Vector<T, N> r = s * v.no_grad();
+    Vector<T, N> r = s * v.detach();
     if (!v.requires_grad())
         return r;
     return Vector<T, N, true>(r, [=](const Vector<T, N>& grad) mutable {
@@ -407,23 +416,55 @@ template <typename T, std::size_t N, bool Ag1, bool Ag2,
 static Vector<T, N, true> operator/(
     Vector<T, N, Ag1> lhs, Vector<T, N, Ag2> rhs)
 {
-    Vector<T, N> r = internal::no_grad(lhs) / internal::no_grad(rhs);
+    Vector<T, N> r = internal::detach(lhs) / internal::detach(rhs);
     if (!internal::requires_grad(lhs) && !internal::requires_grad(rhs))
         return r;
     return Vector<T, N, true>(r, [=](const Vector<T, N>& grad) mutable {
-        internal::backward(lhs, grad / internal::no_grad(rhs));
-        internal::backward(rhs, -internal::no_grad(lhs) * grad /
-            (internal::no_grad(rhs) * internal::no_grad(rhs)));
+        internal::backward(lhs, grad / internal::detach(rhs));
+        internal::backward(rhs, -internal::detach(lhs) * grad /
+            (internal::detach(rhs) * internal::detach(rhs)));
     });
 }
 
 template <typename T, std::size_t N>
 static Vector<T, N, true> operator/(Vector<T, N, true> v, T s)
 {
-    Vector<T, N> r = v.no_grad() / s;
+    Vector<T, N> r = v.detach() / s;
     if (!v.requires_grad())
         return r;
     return Vector<T, N, true>(r, [=](const Vector<T, N>& grad) mutable {
         v.backward(grad / s);
     });
+}
+
+template <typename T, std::size_t N>
+static T dot(const Vector<T, N>& lhs, const Vector<T, N>& rhs)
+{
+    Vector<T, N> tmp = lhs * rhs;
+    return std::accumulate(tmp.begin(), tmp.end(), T(0));
+}
+
+template <typename T, std::size_t N>
+static T norm(const Vector<T, N>& v)
+{
+    return sqrt(dot(v, v));
+}
+
+// WARN: No checks for when the norm is zero!
+template <typename T, std::size_t N>
+static Vector<T, N> normalize(const Vector<T, N>& v)
+{
+    return v / norm(v);
+}
+
+template <typename T>
+static Vector<T, 3> cross(const Vector<T, 3>& lhs, const Vector<T, 3>& rhs)
+{
+    Vector<T, 3> r;
+    r[0] = lhs[1]*rhs[2] - lhs[2]*rhs[1];
+    r[1] = lhs[2]*rhs[0] - lhs[0]*rhs[2];
+    r[2] = lhs[0]*rhs[1] - lhs[1]*rhs[0];
+    return r;
+}
+
 }
