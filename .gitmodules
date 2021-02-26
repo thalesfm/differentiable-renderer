@@ -1,7 +1,3 @@
-[submodule "ext/armadillo"]
-	path = ext/armadillo
-	url = https://gitlab.com/conradsnicta/armadillo-code.git
-	branch = 10.2.x
 [submodule "ext/tclap"]
 	path = ext/tclap
 	url = https://git.code.sf.net/p/tclap/code
