@@ -14,7 +14,7 @@ endif()
 add_executable(render src/render.cpp)
 target_include_directories(render PRIVATE include ext/tclap/include)
 target_link_libraries(render PRIVATE m Half IlmImf)
-target_compile_options(render PRIVATE "$<$<CONFIG:Debug>:-Og -ggdb>")
+target_compile_options(render PRIVATE "$<$<CONFIG:Debug>:-Og;-ggdb>")
 target_compile_options(render PRIVATE "$<$<CONFIG:Release>:-O3>")
 
 add_subdirectory(ext/openexr EXCLUDE_FROM_ALL)
