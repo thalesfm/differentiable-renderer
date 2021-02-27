@@ -491,16 +491,12 @@ inline T dot(const Vector<T, N>& lhs, const Vector<T, N>& rhs)
 
 template <typename T, std::size_t N>
 inline T norm(const Vector<T, N>& v)
-{
-    return sqrt(dot(v, v));
-}
+{ return sqrt(dot(v, v)); }
 
 // WARN: No checks for when the norm is zero!
 template <typename T, std::size_t N>
 inline Vector<T, N> normalize(const Vector<T, N>& v)
-{
-    return v / norm(v);
-}
+{ return v / norm(v); }
 
 template <typename T>
 inline Vector<T, 3> cross(const Vector<T, 3>& lhs, const Vector<T, 3>& rhs)

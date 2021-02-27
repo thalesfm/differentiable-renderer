@@ -41,8 +41,9 @@ private:
 
     Var3 scatter(Scene& scene, RaycastHit& hit, Vec3 dir_in, int depth)
     {
+        auto sampler = hit.material.bxdf->sampler(hit.normal, -dir_in);
         double pdf;
-        Vec3 dir_out = hit.material.bxdf->sample(hit.normal, -dir_in, pdf);
+        Vec3 dir_out = sampler->sample(pdf);
         Vec3 orig = hit.point + 1e-3*dir_out;
         Var3 emission = hit.material.emission;
         Var3 brdf_value = hit.material.bxdf->operator()(hit.normal, -dir_in, dir_out);

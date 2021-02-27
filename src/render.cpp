@@ -19,9 +19,9 @@ int main(int argc, const char *argv[])
     }
 
     // Configure scene parameters
-    Var3 red_var(red, true);
-    Var3 green_var(green, true);
-    Var3 white_var(white, true);
+    Var3 red_var(0.5 * red, true);
+    Var3 green_var(0.5 * green, true);
+    Var3 white_var(0.5 * white, true);
     Var3 emission_var(white, true);
 
     // Configure scene materials
@@ -30,20 +30,20 @@ int main(int argc, const char *argv[])
     DiffuseBxDF white_bxdf(white_var);
     DiffuseBxDF black_bxdf(black);
 
-    Material red_mat {&red_bxdf, black};
-    Material green_mat {&green_bxdf, black};
-    Material white_mat {&white_bxdf, black};
-    Material emissive_mat {&black_bxdf, emission_var};
+    Material red_mat = {&red_bxdf, black};
+    Material green_mat = {&green_bxdf, black};
+    Material white_mat = {&white_bxdf, black};
+    Material emissive_mat = {&black_bxdf, emission_var};
 
     // Configure scene shapes
-    Sphere sphere1(Vec3 {0., 0., 3.}, 1.);
-    Sphere sphere2(Vec3 {-1., 1., 4.5}, 1.);
-    Sphere sphere3(Vec3 {0., 3., 3.}, 1.);
-    Plane plane1(Vec3 {-1., 0., 0.}, -3.);
-    Plane plane2(Vec3 {1., 0., 0.1}, -3.);
-    Plane plane3(Vec3 {0., 1., 0.}, -3.);
-    Plane plane4(Vec3 {0., -1., 0.}, -3.);
-    Plane plane5(Vec3 {0., 0., -1.}, -6.);
+    Sphere sphere1(Vec3{0., 0., 3.}, 1.);
+    Sphere sphere2(Vec3{-1., 1., 4.5}, 1.);
+    Sphere sphere3(Vec3{0., 3., 3.}, 1.);
+    Plane plane1(Vec3{-1., 0., 0.}, -3.);
+    Plane plane2(Vec3{1., 0., 0.1}, -3.);
+    Plane plane3(Vec3{0., 1., 0.}, -3.);
+    Plane plane4(Vec3{0., -1., 0.}, -3.);
+    Plane plane5(Vec3{0., 0., -1.}, -6.);
 
     // Build test scene
     Scene scene;
@@ -77,9 +77,9 @@ int main(int argc, const char *argv[])
                 radiance += rad.detach() / double(args.samples);
                 rad.backward(Vec3(1) / double(args.samples));
             }
-            // img[y*width + x] = radiance;
-            img[y*width + x]  = red_var.grad();
-            red_var.grad() = Vec3(0);
+            img[y*width + x] = radiance;
+            // img[y*width + x]  = red_var.grad();
+            // red_var.grad() = Vec3(0);
             // img[i*width + j] = emission.detach();
             // emission_var.grad() = vec3(fill::zeros);
         }
