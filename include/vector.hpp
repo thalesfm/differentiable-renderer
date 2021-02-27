@@ -266,49 +266,49 @@ private:
 namespace internal {
 
 template <typename T, std::size_t N>
-static Vector<T, N>& detach(Vector<T, N>& v)
+inline Vector<T, N>& detach(Vector<T, N>& v)
 { return v; }
 
 template <typename T, std::size_t N>
-static const Vector<T, N>& detach(const Vector<T, N>& v)
+inline const Vector<T, N>& detach(const Vector<T, N>& v)
 { return v; }
 
 template <typename T, std::size_t N>
-static Vector<T, N>& detach(Vector<T, N, true>& v)
+inline Vector<T, N>& detach(Vector<T, N, true>& v)
 { return v.detach(); }
 
 template <typename T, std::size_t N>
-static const Vector<T, N>& detach(const Vector<T, N, true>& v)
+inline const Vector<T, N>& detach(const Vector<T, N, true>& v)
 { return v.detach(); }
 
 template <typename T, std::size_t N>
-static constexpr bool requires_grad(const Vector<T, N>& v)
+inline constexpr bool requires_grad(const Vector<T, N>& v)
 { return false; }
 
 template <typename T, std::size_t N>
-static bool requires_grad(const Vector<T, N, true>& v)
+inline bool requires_grad(const Vector<T, N, true>& v)
 { return v.requires_grad(); }
 
 template <typename T, std::size_t N>
-static void backward(Vector<T, N>& v, const Vector<T, N>& grad) { }
+inline void backward(Vector<T, N>& v, const Vector<T, N>& grad) { }
 
 template <typename T, std::size_t N>
-static void backward(Vector<T, N, true>& v, const Vector<T, N>& grad)
+inline void backward(Vector<T, N, true>& v, const Vector<T, N>& grad)
 { v.backward(grad); }
 
 } // namespace internal
 
 template <typename T, std::size_t N, bool Ag>
-static Vector<T, N, Ag> operator-(const Vector<T, N, Ag>& v)
+inline Vector<T, N, Ag> operator-(const Vector<T, N, Ag>& v)
 { return -1 * v; }
 
 template <typename T, std::size_t N>
-static Vector<T, N> operator+(const Vector<T, N>& lhs, const Vector<T, N>& rhs)
+inline Vector<T, N> operator+(const Vector<T, N>& lhs, const Vector<T, N>& rhs)
 { return Vector<T, N>(lhs) += rhs; }
 
 template <typename T, std::size_t N, bool Ag1, bool Ag2,
     typename = typename std::enable_if<Ag1 || Ag2>::type>
-static Vector<T, N, true> operator+(
+inline Vector<T, N, true> operator+(
     Vector<T, N, Ag1> lhs, Vector<T, N, Ag2> rhs)
 {
     Vector<T, N> r = internal::detach(lhs) + internal::detach(rhs);
@@ -321,12 +321,12 @@ static Vector<T, N, true> operator+(
 }
 
 template <typename T, std::size_t N>
-static Vector<T, N> operator-(const Vector<T, N>& lhs, const Vector<T, N>& rhs)
+inline Vector<T, N> operator-(const Vector<T, N>& lhs, const Vector<T, N>& rhs)
 { return Vector<T, N>(lhs) -= rhs; }
 
 template <typename T, std::size_t N, bool Ag1, bool Ag2,
     typename = typename std::enable_if<Ag1 || Ag2>::type>
-static Vector<T, N, true> operator-(
+inline Vector<T, N, true> operator-(
     Vector<T, N, Ag1> lhs, Vector<T, N, Ag2> rhs)
 {
     Vector<T, N> r = internal::detach(lhs) - internal::detach(rhs);
@@ -339,22 +339,22 @@ static Vector<T, N, true> operator-(
 }
 
 template <typename T, std::size_t N>
-static Vector<T, N> operator*(const Vector<T, N>& lhs, const Vector<T, N>& rhs)
+inline Vector<T, N> operator*(const Vector<T, N>& lhs, const Vector<T, N>& rhs)
 { return Vector<T, N>(lhs) *= rhs; }
 
 template <typename T, typename Ts, std::size_t N,
     typename = typename std::enable_if<std::is_convertible<Ts, T>::value>::type>
-static Vector<T, N> operator*(const Vector<T, N>& v, Ts s)
+inline Vector<T, N> operator*(const Vector<T, N>& v, Ts s)
 { return Vector<T, N>(v) *= s; }
 
 template <typename T, typename Ts, std::size_t N,
     typename = typename std::enable_if<std::is_convertible<Ts, T>::value>::type>
-static Vector<T, N> operator*(Ts s, const Vector<T, N>& v)
+inline Vector<T, N> operator*(Ts s, const Vector<T, N>& v)
 { return Vector<T, N>(v) *= s; }
 
 template <typename T, std::size_t N, bool Ag1, bool Ag2,
     typename = typename std::enable_if<Ag1 || Ag2>::type>
-static Vector<T, N, true> operator*(
+inline Vector<T, N, true> operator*(
     Vector<T, N, Ag1> lhs, Vector<T, N, Ag2> rhs)
 {
     Vector<T, N> r = internal::detach(lhs) * internal::detach(rhs);
@@ -368,12 +368,12 @@ static Vector<T, N, true> operator*(
 
 template <typename T, typename Ts, std::size_t N,
     typename = typename std::enable_if<std::is_convertible<Ts, T>::value>::type>
-static Vector<T, N, true> operator*(Vector<T, N, true> v, Ts s)
+inline Vector<T, N, true> operator*(Vector<T, N, true> v, Ts s)
 { return s * v; }
 
 template <typename T, typename Ts, std::size_t N,
     typename = typename std::enable_if<std::is_convertible<Ts, T>::value>::type>
-static Vector<T, N, true> operator*(Ts s, Vector<T, N, true> v)
+inline Vector<T, N, true> operator*(Ts s, Vector<T, N, true> v)
 {
     Vector<T, N> r = s * v.detach();
     if (!v.requires_grad())
@@ -384,17 +384,17 @@ static Vector<T, N, true> operator*(Ts s, Vector<T, N, true> v)
 }
 
 template <typename T, std::size_t N>
-static Vector<T, N> operator/(const Vector<T, N>& lhs, const Vector<T, N>& rhs)
+inline Vector<T, N> operator/(const Vector<T, N>& lhs, const Vector<T, N>& rhs)
 { return Vector<T, N>(lhs) /= rhs; }
 
 template <typename T, typename Ts, std::size_t N,
     typename = typename std::enable_if<std::is_convertible<Ts, T>::value>::type>
-static Vector<T, N> operator/(const Vector<T, N>& v, Ts s)
+inline Vector<T, N> operator/(const Vector<T, N>& v, Ts s)
 { return Vector<T, N>(v) /= T(s); }
 
 template <typename T, std::size_t N, bool Ag1, bool Ag2,
     typename = typename std::enable_if<Ag1 || Ag2>::type>
-static Vector<T, N, true> operator/(
+inline Vector<T, N, true> operator/(
     Vector<T, N, Ag1> lhs, Vector<T, N, Ag2> rhs)
 {
     Vector<T, N> r = internal::detach(lhs) / internal::detach(rhs);
@@ -409,7 +409,7 @@ static Vector<T, N, true> operator/(
 
 template <typename T, typename Ts, std::size_t N,
     typename = typename std::enable_if<std::is_convertible<Ts, T>::value>::type>
-static Vector<T, N, true> operator/(Vector<T, N, true> v, Ts s)
+inline Vector<T, N, true> operator/(Vector<T, N, true> v, Ts s)
 {
     Vector<T, N> r = v.detach() / s;
     if (!v.requires_grad())
@@ -420,7 +420,7 @@ static Vector<T, N, true> operator/(Vector<T, N, true> v, Ts s)
 }
 
 template <typename T, std::size_t N, bool Ag>
-std::ostream& operator<<(std::ostream& os, const Vector<T, N, Ag>& v)
+inline std::ostream& operator<<(std::ostream& os, const Vector<T, N, Ag>& v)
 {
     os << "Vector<" << typeid(T).name() << ", " << N;
     if (Ag)
@@ -434,27 +434,27 @@ std::ostream& operator<<(std::ostream& os, const Vector<T, N, Ag>& v)
 }
 
 template <typename T, std::size_t N>
-static T dot(const Vector<T, N>& lhs, const Vector<T, N>& rhs)
+inline T dot(const Vector<T, N>& lhs, const Vector<T, N>& rhs)
 {
     Vector<T, N> tmp = lhs * rhs;
     return std::accumulate(tmp.begin(), tmp.end(), T(0));
 }
 
 template <typename T, std::size_t N>
-static T norm(const Vector<T, N>& v)
+inline T norm(const Vector<T, N>& v)
 {
     return sqrt(dot(v, v));
 }
 
 // WARN: No checks for when the norm is zero!
 template <typename T, std::size_t N>
-static Vector<T, N> normalize(const Vector<T, N>& v)
+inline Vector<T, N> normalize(const Vector<T, N>& v)
 {
     return v / norm(v);
 }
 
 template <typename T>
-static Vector<T, 3> cross(const Vector<T, 3>& lhs, const Vector<T, 3>& rhs)
+inline Vector<T, 3> cross(const Vector<T, 3>& lhs, const Vector<T, 3>& rhs)
 {
     Vector<T, 3> r;
     r[0] = lhs[1]*rhs[2] - lhs[2]*rhs[1];

@@ -48,9 +48,6 @@ private:
         Var3 brdf_value = hit.material.bxdf->operator()(hit.normal, -dir_in, dir_out);
         Var3 radiance = trace(scene, orig, dir_out, depth+1);
         double cos_theta = dot(hit.normal, dir_out);
-        // std::cout << "\temission = " << emission << std::endl;
-        // std::cout << "\tbrdf_value = " << brdf_value << std::endl;
-        // std::cout << "\tradiance = " << radiance << std::endl;
         return emission + brdf_value * radiance * cos_theta / pdf;
     }
 
@@ -65,7 +62,6 @@ Var3 Pathtracer::trace(Scene& scene, Vec3 orig, Vec3 dir, int depth)
     }
     RaycastHit hit;
     if (raycast(scene, orig, dir, hit)) {
-        // std::cout << "Scatter! (depth =" << depth << ")" << std::endl;
         return scatter(scene, hit, dir, depth);
     } else {
         return Vec3(0);

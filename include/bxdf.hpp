@@ -7,7 +7,7 @@ namespace drt {
 
 namespace internal {
 
-static void make_frame(Vec3 normal, Vec3& tangent, Vec3& bitangent)
+inline void make_frame(Vec3 normal, Vec3& tangent, Vec3& bitangent)
 {
     Vec3 e1 {1., 0., 0.};
     Vec3 e2 {0., 1., 0.};

@@ -6,7 +6,7 @@
 
 namespace drt {
 
-static void write_exr(const char *fname, const Vec3 *data,
+inline void write_exr(const char *fname, const Vec3 *data,
     std::size_t width, std::size_t height)
 {
     std::vector<Imf::Rgba> pixels;

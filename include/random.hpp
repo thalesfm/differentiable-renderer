@@ -4,7 +4,7 @@
 
 namespace drt { namespace random {
 
-static double uniform()
+inline double uniform()
 {
     return double(rand()) / (RAND_MAX - 1);
 }

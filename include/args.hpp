@@ -11,7 +11,7 @@ struct Args {
     std::string output;
 };
 
-static bool parse_args(int argc, const char *const *argv, Args *args)
+inline bool parse_args(int argc, const char *const *argv, Args *args)
 {
     TCLAP::CmdLine cmd("A simple differentiable path tracer", ' ', "0.1");
     TCLAP::ValueArg<int> samples_arg(
