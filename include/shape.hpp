@@ -1,25 +1,46 @@
 #pragma once
 
+#include "bxdf.hpp"
 #include "constants.hpp"
+#include "emitter.hpp"
 #include "vector.hpp"
 
 namespace drt {
 
 class Shape {
 public:
+    Shape(std::shared_ptr<BxDF> bxdf = nullptr,
+          std::shared_ptr<Emitter> emitter = nullptr)
+      : m_bxdf(bxdf), m_emitter(emitter) { }
+
     virtual ~Shape() { }
+
     virtual bool intersect(Vec3 orig, Vec3 dir, double& t) = 0;
+
     virtual Vec3 normal(Vec3 point) = 0;
+
+    BxDF *bxdf()
+    { return m_bxdf.get(); }
+
+    Emitter *emitter()
+    { return m_emitter.get(); }
+
+private:
+    std::shared_ptr<BxDF> m_bxdf;
+    std::shared_ptr<Emitter> m_emitter;
 };
 
 class Plane : public Shape {
 public:
-    Plane(Vec3 normal, double offset)
-      : m_normal(normal)
+    Plane(Vec3 normal, double offset,
+          std::shared_ptr<BxDF> bxdf = nullptr,
+          std::shared_ptr<Emitter> emitter = nullptr)
+      : Shape(bxdf, emitter)
+      , m_normal(normal)
       , m_offset(offset)
     { }
 
-    bool intersect(Vec3 orig, Vec3 dir, double& t_)
+    bool intersect(Vec3 orig, Vec3 dir, double& t_) override
     {
         double h = dot(orig, m_normal) - m_offset;
         double t = h / dot(dir, -m_normal);
@@ -31,7 +52,7 @@ public:
         }
     }
 
-    Vec3 normal(Vec3 point)
+    Vec3 normal(Vec3 point) override
     { return m_normal; }
 
 private:
@@ -41,8 +62,11 @@ private:
 
 class Sphere : public Shape {
 public:
-    Sphere(Vec3 center, double radius)
-      : m_center(center)
+    Sphere(Vec3 center, double radius,
+           std::shared_ptr<BxDF> bxdf = nullptr,
+           std::shared_ptr<Emitter> emitter = nullptr)
+      : Shape(bxdf, emitter)
+      , m_center(center)
       , m_radius(radius)
     { }
 

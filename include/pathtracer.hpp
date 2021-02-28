@@ -1,10 +1,13 @@
 #pragma once
 
-#include "material.hpp"
+#include "bxdf.hpp"
+#include "emitter.hpp"
 #include "vector.hpp"
-#include "scene.hpp"
+#include "shape.hpp"
 
 namespace drt {
+
+using Scene = std::vector<Shape*>;
 
 class Pathtracer {
 public:
@@ -17,16 +20,14 @@ private:
     struct RaycastHit {
         Vec3 point;
         Vec3 normal;
-        Material material;
+        BxDF *bxdf;
+        Emitter *emitter;
     };
 
     bool raycast(Scene& scene, Vec3 orig, Vec3 dir, RaycastHit& hit)
     {
         double tmin = inf;
-        for (auto& surface : scene) {
-            Shape *shape;
-            Material material;
-            std::tie(shape, material) = surface;
+        for (auto shape : scene) {
             double t;
             if (!shape->intersect(orig, dir, t) || t >= tmin) {
                 continue;
@@ -34,19 +35,32 @@ private:
             tmin = t;
             hit.point = orig + t*dir;
             hit.normal = shape->normal(hit.point);
-            hit.material = material;
+            hit.bxdf = shape->bxdf();
+            hit.emitter = shape->emitter();
         }
         return !std::isinf(tmin);
     }
 
     Var3 scatter(Scene& scene, RaycastHit& hit, Vec3 dir_in, int depth)
     {
-        auto sampler = hit.material.bxdf->sampler(hit.normal, -dir_in);
+        Var3 brdf_value;
+        Var3 emission;
+        Vec3 dir_out;
+        Vec3 orig;
         double pdf;
-        Vec3 dir_out = sampler->sample(pdf);
-        Vec3 orig = hit.point + 1e-3*dir_out;
-        Var3 emission = hit.material.emission;
-        Var3 brdf_value = hit.material.bxdf->operator()(hit.normal, -dir_in, dir_out);
+        if (hit.bxdf) {
+            auto sampler = hit.bxdf->sampler(hit.normal, -dir_in);
+            dir_out = sampler->sample(pdf);
+            orig = hit.point + 1e-3*dir_out;
+            brdf_value = hit.bxdf->operator()(hit.normal, -dir_in, dir_out);
+        } else {
+            brdf_value = Vec3(0);
+        }
+        if (hit.emitter) {
+            emission = hit.emitter ? hit.emitter->emission() : Vec3(0);
+        } else {
+            emission = Vec3(0);
+        }
         Var3 radiance = trace(scene, orig, dir_out, depth+1);
         double cos_theta = dot(hit.normal, dir_out);
         return emission + brdf_value * radiance * cos_theta / pdf;

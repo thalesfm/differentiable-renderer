@@ -2,9 +2,8 @@
 #include "args.hpp"
 #include "bxdf.hpp"
 #include "camera.hpp"
-#include "material.hpp"
+#include "emitter.hpp"
 #include "pathtracer.hpp"
-#include "scene.hpp"
 #include "shape.hpp"
 #include "vector.hpp"
 #include "write.hpp"
@@ -25,36 +24,31 @@ int main(int argc, const char *argv[])
     Var3 emission_var(white, true);
 
     // Configure scene materials
-    DiffuseBxDF red_bxdf(red_var);
-    DiffuseBxDF green_bxdf(green_var);
-    DiffuseBxDF white_bxdf(white_var);
-    DiffuseBxDF black_bxdf(black);
-
-    Material red_mat = {&red_bxdf, black};
-    Material green_mat = {&green_bxdf, black};
-    Material white_mat = {&white_bxdf, black};
-    Material emissive_mat = {&black_bxdf, emission_var};
+    auto red_bxdf = std::make_shared<DiffuseBxDF>(red_var);
+    auto green_bxdf = std::make_shared<DiffuseBxDF>(green_var);
+    auto white_bxdf = std::make_shared<DiffuseBxDF>(white_var);
+    auto emitter = std::make_shared<AreaEmitter>(white);
 
     // Configure scene shapes
-    Sphere sphere1(Vec3{0., 0., 3.}, 1.);
-    Sphere sphere2(Vec3{-1., 1., 4.5}, 1.);
-    Sphere sphere3(Vec3{0., 3., 3.}, 1.);
-    Plane plane1(Vec3{-1., 0., 0.}, -3.);
-    Plane plane2(Vec3{1., 0., 0.1}, -3.);
-    Plane plane3(Vec3{0., 1., 0.}, -3.);
-    Plane plane4(Vec3{0., -1., 0.}, -3.);
-    Plane plane5(Vec3{0., 0., -1.}, -6.);
+    Sphere sphere1(Vec3{0., 0., 3.}, 1., white_bxdf);
+    Sphere sphere2(Vec3{-1., 1., 4.5}, 1., white_bxdf);
+    Sphere sphere3(Vec3{0., 3., 3.}, 1., nullptr, emitter);
+    Plane plane1(Vec3{-1., 0., 0.}, -3., red_bxdf);
+    Plane plane2(Vec3{1., 0., 0.1}, -3., green_bxdf);
+    Plane plane3(Vec3{0., 1., 0.}, -3., white_bxdf);
+    Plane plane4(Vec3{0., -1., 0.}, -3., white_bxdf);
+    Plane plane5(Vec3{0., 0., -1.}, -6., white_bxdf);
 
     // Build test scene
     Scene scene;
-    scene.add(sphere1, white_mat);
-    scene.add(sphere2, white_mat);
-    scene.add(sphere3, emissive_mat);
-    scene.add(plane1, red_mat);
-    scene.add(plane2, green_mat);
-    scene.add(plane3, white_mat);
-    scene.add(plane4, white_mat);
-    scene.add(plane5, white_mat);
+    scene.push_back(&sphere1);
+    scene.push_back(&sphere2);
+    scene.push_back(&sphere3);
+    scene.push_back(&plane1);
+    scene.push_back(&plane2);
+    scene.push_back(&plane3);
+    scene.push_back(&plane4);
+    scene.push_back(&plane5);
 
     // Configure camera position and resolution
     std::size_t width = 640;
