@@ -51,8 +51,8 @@ int main(int argc, const char *argv[])
     scene.push_back(&plane5);
 
     // Configure camera position and resolution
-    std::size_t width = 640;
-    std::size_t height = 480;
+    std::size_t width = args.width;
+    std::size_t height = args.height;
     Camera cam(width, height);
     Vec3 *img = new Vec3[width * height];
 
