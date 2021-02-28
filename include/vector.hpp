@@ -168,10 +168,10 @@ private:
     Vector<T, N> m_grad;
 };
 
-template <typename T, std::size_t N, typename Ftor>
+template <typename T, std::size_t N, typename Backward>
 class BackwardNode : public AutogradNode<T, N> {
 public:
-    BackwardNode(const Vector<T, N>& v, const Ftor& backward)
+    BackwardNode(const Vector<T, N>& v, const Backward& backward)
       : AutogradNode<T, N>(v), m_backward(backward) { }
 
     bool requires_grad() const override
@@ -181,7 +181,7 @@ public:
     { m_backward(grad); }
 
 private:
-    Ftor m_backward;
+    typename std::decay<Backward>::type m_backward;
 };
 
 } // namespace internal
@@ -207,9 +207,9 @@ public:
             m_ptr = std::make_shared<internal::ConstantNode<T, N>>(v);
     }
 
-    template <typename Ftor>
-    Vector(const Vector<T, N>& v, const Ftor& backward)
-      : m_ptr(new internal::BackwardNode<T, N, Ftor>(v, backward)) { }
+    template <typename Backward>
+    Vector(const Vector<T, N>& v, const Backward& backward)
+      : m_ptr(new internal::BackwardNode<T, N, Backward>(v, backward)) { }
 
     // WARN: Potentially unsafe!
     T& operator[](std::size_t pos)
