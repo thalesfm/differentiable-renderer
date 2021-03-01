@@ -13,13 +13,6 @@ public:
 
     Dual(const T& real, const T& dual = T()) : m_real(real), m_dual(dual) { }
 
-    operator T() const
-    {
-        if (m_dual != 0)
-            ; // throw std::runtime_error("lossy conversion from dual to scalar");
-        return real();
-    }
-
     T& real()
     { return m_real; }
 
@@ -48,17 +41,21 @@ public:
 
     Dual& operator*=(const Dual& rhs)
     {
-        real() *= rhs.real();
-        dual() = real()*rhs.dual() + dual()*rhs.real();
+        T new_real = real() * rhs.real();
+        T new_dual = real()*rhs.dual() + dual()*rhs.real();
+        real() = new_real;
+        dual() = new_dual;
         return *this;
     }
 
     // WARN: No checks for when rhs.real() is zero!
     Dual& operator/=(const Dual& rhs)
     {
-        real() /= rhs.real();
-        dual() = (dual()*rhs.real() - real()*rhs.dual()) /
+        T new_real = real() / rhs.real();
+        T new_dual = (dual()*rhs.real() - real()*rhs.dual()) /
             (rhs.real()*rhs.real());
+        real() = new_real;
+        dual() = new_dual;
         return *this;
     }
 
@@ -75,13 +72,13 @@ template <typename T, typename S,
           typename = typename std::enable_if<
               std::is_convertible<S, T>::value>::type>
 inline Dual<T> operator+(Dual<T> n, S s)
-{ return n += s; }
+{ return n += Dual<T>(s); }
 
 template <typename T, typename S,
           typename = typename std::enable_if<
               std::is_convertible<S, T>::value>::type>
 inline Dual<T> operator+(S s, Dual<T> n)
-{ return n += s; }
+{ return n += Dual<T>(s); }
 
 template <typename T>
 inline Dual<T> operator-(Dual<T> lhs, const Dual<T>& rhs)
@@ -91,7 +88,7 @@ template <typename T, typename S,
           typename = typename std::enable_if<
               std::is_convertible<S, T>::value>::type>
 inline Dual<T> operator-(Dual<T> n, S s)
-{ return n -= s; }
+{ return n -= Dual<T>(s); }
 
 template <typename T, typename S,
           typename = typename std::enable_if<
@@ -107,13 +104,13 @@ template <typename T, typename S,
           typename = typename std::enable_if<
               std::is_convertible<S, T>::value>::type>
 inline Dual<T> operator*(Dual<T> n, S s)
-{ return n *= s; }
+{ return n *= Dual<T>(s); }
 
 template <typename T, typename S,
           typename = typename std::enable_if<
               std::is_convertible<S, T>::value>::type>
 inline Dual<T> operator*(S s, Dual<T> n)
-{ return n *= s; }
+{ return n *= Dual<T>(s); }
 
 template <typename T>
 inline Dual<T> operator/(Dual<T> lhs, const Dual<T>& rhs)
@@ -123,7 +120,7 @@ template <typename T, typename S,
           typename = typename std::enable_if<
               std::is_convertible<S, T>::value>::type>
 inline Dual<T> operator/(Dual<T> n, S s)
-{ return n /= s; }
+{ return n /= Dual<T>(s); }
 
 template <typename T, typename S,
           typename = typename std::enable_if<
@@ -135,16 +132,13 @@ template <typename T>
 inline std::ostream& operator<<(std::ostream& os, const Dual<T>& n)
 { return os << n.real() << "+" << n.dual() << "e"; }
 
-/*
 template <typename T>
 inline T real(const Dual<T>& n)
 { return n.real(); }
-*/
 
 template <typename T>
 inline Dual<T> sqrt(const Dual<T>& n)
 {
-    // TODO: Double check this
     T real = std::sqrt(n.real());
     T dual = n.dual() / (2*real);
     return Dual<T>(real, dual);

@@ -1,12 +1,15 @@
 #pragma once
 
 #include <cmath>
+#include <complex>
 #include "bxdf.hpp"
 #include "constants.hpp"
 #include "emitter.hpp"
 #include "vector.hpp"
 
 namespace drt {
+
+using std::real;
 
 template <typename T>
 class Shape {
@@ -50,8 +53,8 @@ public:
                    Vector<T, 3> dir,
                    double& t) const override
     {
-        double h = dot(orig, m_normal) - m_offset;
-        t = h / dot(dir, -m_normal);
+        double h = real(dot(orig, m_normal)) - m_offset;
+        t = h / real(dot(dir, -m_normal));
         return t > 0;
     }
 
@@ -81,8 +84,8 @@ public:
     {
         orig -= m_center;
         double a = 1;
-        double b = 2 * dot(orig, dir);
-        double c = dot(orig, orig) - m_radius*m_radius;
+        double b = 2 * real(dot(orig, dir));
+        double c = real(dot(orig, orig)) - m_radius*m_radius;
         double d = b*b - 4*a*c;
         if (d < 0)
             return false;

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <complex>
 #include "bxdf.hpp"
 #include "emitter.hpp"
 #include "vector.hpp"
@@ -18,10 +19,12 @@ Vector<T, 3> sample_bxdf(const BxDF<T> *bxdf,
                          Vector<T, 3> dir_in,
                          double& pdf)
 {
-    if (bxdf)
+    if (bxdf) {
         return bxdf->sample(normal, dir_in, pdf);
-    else
+    } else {
+        pdf = 1;
         return Vector<T, 3>(0);
+    }
 }
 
 template <typename T>
@@ -93,11 +96,12 @@ private:
         Vector<T, 3, true> diffuse = integrate<T, 3>(
             [=](const Vector<T, 3>& dir_out)
             {
+                using std::real;
                 Vector<T, 3> orig = hit.point + 1e-3*dir_out;
                 Vector<T, 3, true> brdf_value = internal::eval_bxdf(
                     hit.bxdf, hit.normal, -dir_in, dir_out);
                 Vector<T, 3, true> radiance = trace(scene, orig, dir_out, depth+1);
-                double cos_theta = dot(hit.normal, dir_out);
+                double cos_theta = real(dot(hit.normal, dir_out));
                 return brdf_value * radiance * cos_theta;
             },
             [=](double& pdf)

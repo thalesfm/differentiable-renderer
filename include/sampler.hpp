@@ -1,5 +1,6 @@
 #pragma once
 
+#include <complex>
 #include "constants.hpp"
 #include "random.hpp"
 #include "vector.hpp"
@@ -8,6 +9,8 @@ namespace drt {
 
 namespace internal {
 
+using std::real;
+
 template <typename T>
 inline void make_frame(Vector<T, 3> normal,
                        Vector<T, 3>& tangent,
@@ -15,7 +18,7 @@ inline void make_frame(Vector<T, 3> normal,
 {
     Vector<T, 3> e1 {1., 0., 0.};
     Vector<T, 3> e2 {0., 1., 0.};
-    if (std::abs(dot(e1, normal)) < std::abs(dot(e2, normal)))
+    if (std::abs(real(dot(e1, normal))) < std::abs(real(dot(e2, normal))))
         tangent = normalize(e1 - normal*dot(e1, normal));
     else
         tangent = normalize(e2 - normal*dot(e2, normal));
