@@ -474,7 +474,7 @@ inline std::ostream& operator<<(std::ostream& os, const Vector<T, N, Ag>& v)
     os << "Vector<" << typeid(T).name() << ", " << N;
     if (Ag)
         os << ", true";
-    os << "> {";
+    os << ">{";
     for (std::size_t i = 0; i < v.size()-1; ++i)
         os << v[i] << ", ";
     if (v.size() > 0)

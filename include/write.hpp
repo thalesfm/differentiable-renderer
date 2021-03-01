@@ -15,7 +15,7 @@ inline void write_exr(const char *fname, const Vector<T, 3> *data,
     for (std::size_t i = 0; i < height; ++i) {
         for (std::size_t j = 0; j < width; ++j) {
             Vector<T, 3> rgb = data[i*width + j];
-            pixels.emplace_back(rgb[0], rgb[1], rgb[2], 1.);
+            pixels.emplace_back(double(rgb[0]), double(rgb[1]), double(rgb[2]));
         }
     }
     Imf::RgbaOutputFile file(fname, width, height, Imf::WRITE_RGBA);

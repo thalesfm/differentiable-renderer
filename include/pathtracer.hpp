@@ -90,7 +90,6 @@ private:
                                Vector<T, 3> dir_in,
                                std::size_t depth) const
     {
-        double pdf;
         Vector<T, 3, true> diffuse = integrate<T, 3>(
             [=](const Vector<T, 3>& dir_out)
             {

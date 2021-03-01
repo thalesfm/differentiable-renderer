@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cmath>
 #include "bxdf.hpp"
 #include "constants.hpp"
 #include "emitter.hpp"
@@ -85,8 +86,8 @@ public:
         double d = b*b - 4*a*c;
         if (d < 0)
             return false;
-        double t1 = (-b - sqrt(d)) / (2 * a);
-        double t2 = (-b + sqrt(d)) / (2 * a);
+        double t1 = (-b - std::sqrt(d)) / (2 * a);
+        double t2 = (-b + std::sqrt(d)) / (2 * a);
         if (t1 > 0 && t2 > 0) {
             t = std::min(t1, t2);
             return true;

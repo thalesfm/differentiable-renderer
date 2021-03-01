@@ -2,6 +2,7 @@
 #include "args.hpp"
 #include "bxdf.hpp"
 #include "camera.hpp"
+#include "dual.hpp"
 #include "emitter.hpp"
 #include "integrate.hpp"
 #include "pathtracer.hpp"
@@ -18,7 +19,8 @@ int main(int argc, const char *argv[])
         return EXIT_FAILURE;
     }
 
-    using T = double;
+    // using T = double;
+    using T = Dual<double>;
 
     // Configure scene parameters
     Vector<T, 3, true> red(Vector<T, 3>{0.5, 0, 0}, true);
@@ -57,14 +59,14 @@ int main(int argc, const char *argv[])
     std::size_t width = args.width;
     std::size_t height = args.height;
     Camera<T> cam(width, height);
-    Vector<T, 3> *img = new Vector<T, 3>[width * height];
+    Vector<double, 3> *img = new Vector<double, 3>[width * height];
 
     // Configure path tracer sampling
     Pathtracer<T> tracer(args.absorb_prob, args.min_bounces);
 
     // Render test scene
-    for (int y = 0; y < cam.height(); ++y) {
-        for (int x = 0; x < cam.width(); ++x) {
+    for (std::size_t y = 0; y < cam.height(); ++y) {
+        for (std::size_t x = 0; x < cam.width(); ++x) {
             Vector<T, 3> pixel_radiance(0);
             // Vec3 red_grad(0);
             for (std::size_t i = 0; i < args.samples; ++i) {
@@ -75,7 +77,10 @@ int main(int argc, const char *argv[])
                 // radiance.backward(Vec3(1));
                 // red_grad += red.grad();
             }
-            img[y*width + x] = pixel_radiance / args.samples;
+            // img[y*width + x] = pixel_radiance / args.samples;
+            img[y*width + x][0] = pixel_radiance[0].real() / args.samples;
+            img[y*width + x][1] = pixel_radiance[1].real() / args.samples;
+            img[y*width + x][2] = pixel_radiance[2].real() / args.samples;
             // img[y*width + x] = red_grad / args.samples;
         }
         printf("% 5.2f%%\r", 100. * (y+1) / cam.height());
