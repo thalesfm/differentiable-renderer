@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cstddef>
+#include "random.hpp"
 #include "vector.hpp"
 
 namespace drt {
@@ -30,28 +32,31 @@ public:
         m_up = cross(m_right, m_forward);
     }
 
-    int width() const
+    std::size_t width() const
     { return m_width; }
 
-    int height() const
+    std::size_t height() const
     { return m_height; }
+
+    Vec3 eye() const
+    { return m_eye; }
 
     double aspect() const
     { return double(m_width) / m_height; }
 
-    void pix2ray(double x, double y, Vec3& orig, Vec3& dir)
+    Vec3 sample(std::size_t x, std::size_t y)
     {
-        orig = m_eye;
-        double s = x / m_width;
-        double t = y / m_height;
-        dir = m_forward;
+        double s = (x + random::uniform()) / m_width;
+        double t = (y + random::uniform()) / m_height;
+        Vec3 dir = m_forward;
         dir += (2.*s - 1.) * aspect() * tan(m_vfov / 2.) * m_right;
         dir += (2.*t - 1.) * tan(m_vfov / 2.) * -m_up;
         dir = normalize(dir);
+        return dir;
     }
 private:
-    int m_width;
-    int m_height;
+    std::size_t m_width;
+    std::size_t m_height;
     double m_vfov;
     Vec3 m_eye;
     Vec3 m_forward;

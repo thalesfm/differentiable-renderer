@@ -3,6 +3,7 @@
 #include "bxdf.hpp"
 #include "camera.hpp"
 #include "emitter.hpp"
+#include "integrate.hpp"
 #include "pathtracer.hpp"
 #include "shape.hpp"
 #include "vector.hpp"
@@ -62,20 +63,18 @@ int main(int argc, const char *argv[])
     // Render test scene
     for (int y = 0; y < cam.height(); ++y) {
         for (int x = 0; x < cam.width(); ++x) {
-            Vec3 orig;
-            Vec3 dir;
-            cam.pix2ray(x, y, orig, dir);
-            Vec3 radiance(0);
-            for (int k = 0; k < args.samples; ++k) {
-                Var3 rad = tracer.trace(scene, orig, dir);
-                radiance += rad.detach() / double(args.samples);
-                rad.backward(Vec3(1) / double(args.samples));
+            // Vec3 pixel_radiance(0);
+            Vec3 red_grad(0);
+            for (std::size_t i = 0; i < args.samples; ++i) {
+                Vec3 dir = cam.sample(x, y);
+                Var3 radiance = tracer.trace(scene, cam.eye(), dir);
+                // pixel_radiance += radiance.detach();
+                red_var.grad() = Vec3(0);
+                radiance.backward(Vec3(1));
+                red_grad += red_var.grad();
             }
-            img[y*width + x] = radiance;
-            // img[y*width + x]  = red_var.grad();
-            // red_var.grad() = Vec3(0);
-            // img[i*width + j] = emission.detach();
-            // emission_var.grad() = vec3(fill::zeros);
+            // img[y*width + x] = pixel_radiance / args.samples;
+            img[y*width + x] = red_grad / args.samples;
         }
         printf("% 5.2f%%\r", 100. * (y+1) / cam.height());
         fflush(stdout);

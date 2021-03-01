@@ -133,7 +133,7 @@ public:
 
     virtual bool requires_grad() const = 0;
 
-    virtual void backward(const Vector<T, N>& grad) = 0;
+    virtual void backward(const Vector<T, N>& grad) const = 0;
 };
 
 template <typename T, std::size_t N>
@@ -144,7 +144,7 @@ public:
     bool requires_grad() const override
     { return false; }
 
-    void backward(const Vector<T, N>& grad) override { }
+    void backward(const Vector<T, N>& grad) const override { }
 };
 
 template <typename T, std::size_t N>
@@ -161,11 +161,11 @@ public:
     bool requires_grad() const override
     { return true; }
 
-    void backward(const Vector<T, N>& grad) override
+    void backward(const Vector<T, N>& grad) const override
     { m_grad += grad; }
 
 private:
-    Vector<T, N> m_grad;
+    mutable Vector<T, N> m_grad;
 };
 
 template <typename T, std::size_t N, typename Backward>
@@ -177,7 +177,7 @@ public:
     bool requires_grad() const override
     { return true; }
 
-    void backward(const Vector<T, N>& grad) override
+    void backward(const Vector<T, N>& grad) const override
     { m_backward(grad); }
 
 private:
@@ -237,7 +237,7 @@ public:
     bool requires_grad() const
     { return m_ptr->requires_grad(); }
 
-    void backward(const Vector<T, N>& grad)
+    void backward(const Vector<T, N>& grad) const
     { m_ptr->backward(grad); }
 
     Vector<T, N, true>& operator+=(const Vector<T, N, true>& rhs)
@@ -297,7 +297,7 @@ inline void backward(Vector<T, N, true>& v, const Vector<T, N>& grad)
 
 template <typename T, std::size_t N>
 struct AddBackward {
-    void operator()(const Vector<T, N>& grad)
+    void operator()(const Vector<T, N>& grad) const
     {
         lhs.backward(grad);
         rhs.backward(grad);
@@ -308,7 +308,7 @@ struct AddBackward {
 
 template <typename T, std::size_t N>
 struct SubBackward {
-    void operator()(const Vector<T, N>& grad)
+    void operator()(const Vector<T, N>& grad) const
     {
         lhs.backward(grad);
         rhs.backward(-grad);
@@ -319,7 +319,7 @@ struct SubBackward {
 
 template <typename T, std::size_t N>
 struct MulBackward {
-    void operator()(const Vector<T, N>& grad)
+    void operator()(const Vector<T, N>& grad) const
     {
         lhs.backward(rhs.detach() * grad);
         rhs.backward(lhs.detach() * grad);
@@ -330,7 +330,7 @@ struct MulBackward {
 
 template <typename T, std::size_t N>
 struct ScalarMulBackward {
-    void operator()(const Vector<T, N>& grad)
+    void operator()(const Vector<T, N>& grad) const
     { v.backward(s * grad); }
 
     T s;
@@ -339,7 +339,7 @@ struct ScalarMulBackward {
 
 template <typename T, std::size_t N>
 struct DivBackward {
-    void operator()(const Vector<T, N>& grad)
+    void operator()(const Vector<T, N>& grad) const
     {
         lhs.backward(grad / rhs.detach());
         rhs.backward(-lhs.detach() * grad / (rhs.detach() * rhs.detach()));
@@ -350,7 +350,7 @@ struct DivBackward {
 
 template <typename T, std::size_t N>
 struct ScalarDivBackward {
-    void operator()(const Vector<T, N>& grad)
+    void operator()(const Vector<T, N>& grad) const
     { v.backward(grad / s); }
 
     Vector<T, N, true> v;

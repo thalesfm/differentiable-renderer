@@ -7,14 +7,14 @@ namespace drt {
 class Emitter {
 public:
     virtual ~Emitter() { }
-    virtual Var3 emission() = 0;
+    virtual Var3 emission() const = 0;
 };
 
 class AreaEmitter : public Emitter {
 public:
     AreaEmitter(Var3 emission) : m_emission(emission) { }
 
-    Var3 emission() override
+    Var3 emission() const override
     { return m_emission; }
 
 private:
