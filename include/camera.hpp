@@ -6,15 +6,17 @@
 
 namespace drt {
 
+// TODO: Remove default argument magic numbers
+template <typename T>
 class Camera {
 public:
-    Camera(int width,
-           int height,
+    Camera(std::size_t width,
+           std::size_t height,
            double vfov = 1.3963,
-           Vec3 eye = Vec3(0),
-           Vec3 forward = Vec3 {0., 0., 1.},
-           Vec3 right = Vec3 {-1., 0., 0.},
-           Vec3 up = Vec3 {0., 1., 0.})
+           Vector<T, 3> eye = Vector<T, 3>(0),
+           Vector<T, 3> forward = Vector<T, 3>{0, 0, 1},
+           Vector<T, 3> right = Vector<T, 3>{-1, 0, 0},
+           Vector<T, 3> up = Vector<T, 3>{0, 1, 0})
      : m_width(width)
      , m_height(height)
      , m_vfov(vfov)
@@ -24,7 +26,7 @@ public:
      , m_up(up)
     { }
 
-    void look_at(Vec3 eye, Vec3 at, Vec3 up)
+    void look_at(Vector<T, 3> eye, Vector<T, 3> at, Vector<T, 3> up)
     {
         m_eye = eye;
         m_forward = normalize(at - eye);
@@ -38,30 +40,31 @@ public:
     std::size_t height() const
     { return m_height; }
 
-    Vec3 eye() const
+    Vector<T, 3> eye() const
     { return m_eye; }
 
     double aspect() const
     { return double(m_width) / m_height; }
 
-    Vec3 sample(std::size_t x, std::size_t y)
+    Vector<T, 3> sample(std::size_t x, std::size_t y) const
     {
         double s = (x + random::uniform()) / m_width;
         double t = (y + random::uniform()) / m_height;
-        Vec3 dir = m_forward;
+        Vector<T, 3> dir = m_forward;
         dir += (2.*s - 1.) * aspect() * tan(m_vfov / 2.) * m_right;
         dir += (2.*t - 1.) * tan(m_vfov / 2.) * -m_up;
         dir = normalize(dir);
         return dir;
     }
+
 private:
     std::size_t m_width;
     std::size_t m_height;
     double m_vfov;
-    Vec3 m_eye;
-    Vec3 m_forward;
-    Vec3 m_right;
-    Vec3 m_up;
+    Vector<T, 3> m_eye;
+    Vector<T, 3> m_forward;
+    Vector<T, 3> m_right;
+    Vector<T, 3> m_up;
 };
 
 }

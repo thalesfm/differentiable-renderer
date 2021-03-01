@@ -4,21 +4,24 @@
 
 namespace drt {
 
+template <typename T>
 class Emitter {
 public:
     virtual ~Emitter() { }
-    virtual Var3 emission() const = 0;
+
+    virtual Vector<T, 3, true> emission() const = 0;
 };
 
-class AreaEmitter : public Emitter {
+template <typename T>
+class AreaEmitter : public Emitter<T> {
 public:
-    AreaEmitter(Var3 emission) : m_emission(emission) { }
+    AreaEmitter(Vector<T, 3, true> emission) : m_emission(emission) { }
 
-    Var3 emission() const override
+    Vector<T, 3, true> emission() const override
     { return m_emission; }
 
 private:
-    Var3 m_emission;
+    Vector<T, 3, true> m_emission;
 };
 
 }

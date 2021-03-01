@@ -7,44 +7,75 @@
 
 namespace drt {
 
-using Scene = std::vector<Shape*>;
+template <typename T>
+using Scene = std::vector<Shape<T>*>;
 
 namespace internal {
 
-Vec3 sample_bxdf(const BxDF *bxdf, Vec3 normal, Vec3 dir_in, double& pdf)
-{ return bxdf ? bxdf->sampler(normal, dir_in)->sample(pdf) : Vec3(0); }
+template <typename T>
+Vector<T, 3> sample_bxdf(const BxDF<T> *bxdf,
+                         Vector<T, 3> normal,
+                         Vector<T, 3> dir_in,
+                         double& pdf)
+{
+    if (bxdf)
+        return bxdf->sample(normal, dir_in, pdf);
+    else
+        return Vector<T, 3>(0);
+}
 
-Var3 eval_bxdf(const BxDF *bxdf, Vec3 normal, Vec3 dir_in, Vec3 dir_out)
-{ return bxdf ? (*bxdf)(normal, dir_in, dir_out) : Vec3(0); }
+template <typename T>
+Vector<T, 3, true> eval_bxdf(const BxDF<T> *bxdf,
+                             Vector<T, 3> normal,
+                             Vector<T, 3> dir_in,
+                             Vector<T, 3> dir_out)
+{
+    if (bxdf)
+        return (*bxdf)(normal, dir_in, dir_out);
+    else
+        return Vector<T, 3>(0);
+}
 
-Var3 emission(const Emitter *emitter)
-{ return emitter ? emitter->emission() : Vec3(0); }
+template <typename T>
+Vector<T, 3, true> emission(const Emitter<T> *emitter)
+{
+    if (emitter)
+        return emitter->emission();
+    else
+        return Vector<T, 3>(0);
+}
 
 } // namespace internal
 
+template <typename T>
 class Pathtracer {
 public:
-    Pathtracer(double absorb, int min_bounces)
+    Pathtracer(double absorb, std::size_t min_bounces)
       : m_absorb(absorb), m_min_bounces(min_bounces) { }
 
-    Var3 trace(const Scene& scene, Vec3 orig, Vec3 dir, int depth = 0);
+    Vector<T, 3, true> trace(const Scene<T>& scene,
+                             Vector<T, 3> orig,
+                             Vector<T, 3> dir,
+                             std::size_t depth = 0) const;
 
 private:
     struct RaycastHit {
-        Vec3 point;
-        Vec3 normal;
-        BxDF *bxdf;
-        Emitter *emitter;
+        Vector<T, 3> point;
+        Vector<T, 3> normal;
+        BxDF<T> *bxdf;
+        Emitter<T> *emitter;
     };
 
-    bool raycast(const Scene& scene, Vec3 orig, Vec3 dir, RaycastHit& hit)
+    bool raycast(const Scene<T>& scene,
+                 Vector<T, 3> orig,
+                 Vector<T, 3> dir,
+                 RaycastHit& hit) const
     {
         double tmin = inf;
         for (auto shape : scene) {
             double t;
-            if (!shape->intersect(orig, dir, t) || t >= tmin) {
+            if (!shape->intersect(orig, dir, t) || t >= tmin)
                 continue;
-            }
             tmin = t;
             hit.point = orig + t*dir;
             hit.normal = shape->normal(hit.point);
@@ -54,15 +85,19 @@ private:
         return !std::isinf(tmin);
     }
 
-    Var3 scatter(const Scene& scene, RaycastHit& hit, Vec3 dir_in, int depth)
+    Vector<T, 3, true> scatter(const Scene<T>& scene,
+                               RaycastHit& hit,
+                               Vector<T, 3> dir_in,
+                               std::size_t depth) const
     {
         double pdf;
-        Var3 diffuse = integrate<double, 3>(
-            [=](const Vec3& dir_out)
+        Vector<T, 3, true> diffuse = integrate<T, 3>(
+            [=](const Vector<T, 3>& dir_out)
             {
-                Vec3 orig = hit.point + 1e-3*dir_out;
-                Var3 brdf_value = internal::eval_bxdf(hit.bxdf, hit.normal, -dir_in, dir_out);
-                Var3 radiance = trace(scene, orig, dir_out, depth+1);
+                Vector<T, 3> orig = hit.point + 1e-3*dir_out;
+                Vector<T, 3, true> brdf_value = internal::eval_bxdf(
+                    hit.bxdf, hit.normal, -dir_in, dir_out);
+                Vector<T, 3, true> radiance = trace(scene, orig, dir_out, depth+1);
                 double cos_theta = dot(hit.normal, dir_out);
                 return brdf_value * radiance * cos_theta;
             },
@@ -73,26 +108,29 @@ private:
             1,
             false
         );
-        Var3 emission = internal::emission(hit.emitter);
+        Vector<T, 3, true> emission = internal::emission(hit.emitter);
         return emission + diffuse;
     }
 
     double m_absorb;
-    int m_min_bounces;
+    std::size_t m_min_bounces;
 };
 
-Var3 Pathtracer::trace(const Scene& scene, Vec3 orig, Vec3 dir, int depth)
+template <typename T>
+Vector<T, 3, true> Pathtracer<T>::trace(const Scene<T>& scene,
+                                        Vector<T, 3> orig,
+                                        Vector<T, 3> dir,
+                                        std::size_t depth) const
+
 {
-    if (depth >= m_min_bounces && random::uniform() < m_absorb) {
-        return Vec3(0);
-    }
+    if (depth >= m_min_bounces && random::uniform() < m_absorb)
+        return Vector<T, 3>(0);
     double p = depth >= m_min_bounces ? (1 - m_absorb) : 1;
     RaycastHit hit;
-    if (raycast(scene, orig, dir, hit)) {
+    if (raycast(scene, orig, dir, hit))
         return scatter(scene, hit, dir, depth) / p;
-    } else {
-        return Vec3(0);
-    }
+    else
+        return Vector<T, 3>(0);
 }
 
 }

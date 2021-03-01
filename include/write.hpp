@@ -6,14 +6,15 @@
 
 namespace drt {
 
-inline void write_exr(const char *fname, const Vec3 *data,
+template <typename T>
+inline void write_exr(const char *fname, const Vector<T, 3> *data,
     std::size_t width, std::size_t height)
 {
     std::vector<Imf::Rgba> pixels;
     pixels.reserve(width * height);
     for (std::size_t i = 0; i < height; ++i) {
         for (std::size_t j = 0; j < width; ++j) {
-            Vec3 rgb = data[i*width + j];
+            Vector<T, 3> rgb = data[i*width + j];
             pixels.emplace_back(rgb[0], rgb[1], rgb[2], 1.);
         }
     }

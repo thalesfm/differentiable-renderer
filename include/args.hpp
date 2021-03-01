@@ -1,14 +1,15 @@
 #pragma once
 
+#include <cstddef>
 #include <tclap/CmdLine.h>
 
 namespace drt {
 
 struct Args {
-    int width;
-    int height;
-    int samples;
-    int min_bounces;
+    std::size_t width;
+    std::size_t height;
+    std::size_t samples;
+    std::size_t min_bounces;
     double absorb_prob;
     std::string output;
 };
@@ -16,7 +17,7 @@ struct Args {
 inline bool parse_args(int argc, const char *const *argv, Args *args)
 {
     TCLAP::CmdLine cmd("A simple differentiable path tracer", ' ', "0.1");
-    TCLAP::ValueArg<int> width_arg(
+    TCLAP::ValueArg<std::size_t> width_arg(
         "x", "width",
         "Output image width",
         false,
@@ -24,7 +25,7 @@ inline bool parse_args(int argc, const char *const *argv, Args *args)
         "integer"
     );
     cmd.add(width_arg);
-    TCLAP::ValueArg<int> height_arg(
+    TCLAP::ValueArg<std::size_t> height_arg(
         "y", "height",
         "Output image height",
         false,
@@ -32,7 +33,7 @@ inline bool parse_args(int argc, const char *const *argv, Args *args)
         "integer"
     );
     cmd.add(height_arg);
-    TCLAP::ValueArg<int> samples_arg(
+    TCLAP::ValueArg<std::size_t> samples_arg(
         "n", "samples",
         "Number of samples per pixel",
         false,
@@ -40,7 +41,7 @@ inline bool parse_args(int argc, const char *const *argv, Args *args)
         "integer"
     );
     cmd.add(samples_arg);
-    TCLAP::ValueArg<int> min_bounces_arg(
+    TCLAP::ValueArg<std::size_t> min_bounces_arg(
         "b", "min-bounces",
         "Min. number of light bounces",
         false,
