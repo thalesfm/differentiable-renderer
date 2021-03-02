@@ -64,6 +64,9 @@ int main(int argc, const char *argv[])
     // Configure path tracer sampling
     Pathtracer<T> tracer(args.absorb_prob, args.min_bounces);
 
+    red[0] += T(0, 1);
+    red[1] += T(0, 1);
+    red[2] += T(0, 1);
     // Render test scene
     for (std::size_t y = 0; y < cam.height(); ++y) {
         for (std::size_t x = 0; x < cam.width(); ++x) {
@@ -78,9 +81,9 @@ int main(int argc, const char *argv[])
                 // red_grad += red.grad();
             }
             // img[y*width + x] = pixel_radiance / args.samples;
-            img[y*width + x][0] = pixel_radiance[0].real() / args.samples;
-            img[y*width + x][1] = pixel_radiance[1].real() / args.samples;
-            img[y*width + x][2] = pixel_radiance[2].real() / args.samples;
+            img[y*width + x][0] = pixel_radiance[0].dual() / args.samples;
+            img[y*width + x][1] = pixel_radiance[1].dual() / args.samples;
+            img[y*width + x][2] = pixel_radiance[2].dual() / args.samples;
             // img[y*width + x] = red_grad / args.samples;
         }
         printf("% 5.2f%%\r", 100. * (y+1) / cam.height());

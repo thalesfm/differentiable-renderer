@@ -1,15 +1,13 @@
 #pragma once
 
 #include <cmath>
-#include <complex>
 #include "bxdf.hpp"
+#include "complex.hpp"
 #include "constants.hpp"
 #include "emitter.hpp"
 #include "vector.hpp"
 
 namespace drt {
-
-using std::real;
 
 template <typename T>
 class Shape {

@@ -27,15 +27,15 @@ public:
 
     Dual& operator+=(const Dual& rhs)
     {
-        real() += rhs.real();
-        dual() += rhs.dual();
+        m_real += rhs.real();
+        m_dual += rhs.dual();
         return *this;
     }
 
     Dual& operator-=(const Dual& rhs)
     {
-        real() -= rhs.real();
-        dual() -= rhs.dual();
+        m_real -= rhs.real();
+        m_dual -= rhs.dual();
         return *this;
     }
 
@@ -43,8 +43,8 @@ public:
     {
         T new_real = real() * rhs.real();
         T new_dual = real()*rhs.dual() + dual()*rhs.real();
-        real() = new_real;
-        dual() = new_dual;
+        m_real = new_real;
+        m_dual = new_dual;
         return *this;
     }
 
@@ -54,8 +54,8 @@ public:
         T new_real = real() / rhs.real();
         T new_dual = (dual()*rhs.real() - real()*rhs.dual()) /
             (rhs.real()*rhs.real());
-        real() = new_real;
-        dual() = new_dual;
+        m_real = new_real;
+        m_dual = new_dual;
         return *this;
     }
 
@@ -135,6 +135,10 @@ inline std::ostream& operator<<(std::ostream& os, const Dual<T>& n)
 template <typename T>
 inline T real(const Dual<T>& n)
 { return n.real(); }
+
+template <typename T>
+inline Dual<T> conj(const Dual<T>& n)
+{ return n; }
 
 template <typename T>
 inline Dual<T> sqrt(const Dual<T>& n)

@@ -9,6 +9,7 @@
 #include <numeric>
 #include <typeinfo>
 #include <type_traits>
+#include "complex.hpp"
 
 namespace drt {
 
@@ -483,20 +484,33 @@ inline std::ostream& operator<<(std::ostream& os, const Vector<T, N, Ag>& v)
 }
 
 template <typename T, std::size_t N>
+inline Vector<T, N> conj(const Vector<T, N>& v)
+{
+    Vector<T, N> r = v;
+    std::transform(r.begin(), r.end(), r.begin(),
+      [](T x) { return conj(x); });
+    return r;
+}
+
+template <typename T, std::size_t N>
 inline T dot(const Vector<T, N>& lhs, const Vector<T, N>& rhs)
 {
-    Vector<T, N> tmp = lhs * rhs;
-    return std::accumulate(tmp.begin(), tmp.end(), T(0));
+    Vector<T, N> tmp = conj(lhs) * rhs;
+    return std::accumulate(tmp.begin(), tmp.end(), T());
 }
 
 template <typename T, std::size_t N>
 inline T norm(const Vector<T, N>& v)
-{ return sqrt(dot(v, v)); }
+{
+    return sqrt(real(dot(v, v)));
+}
 
 // WARN: No checks for when the norm is zero!
 template <typename T, std::size_t N>
 inline Vector<T, N> normalize(const Vector<T, N>& v)
-{ return v / norm(v); }
+{
+    return v / norm(v);
+}
 
 template <typename T>
 inline Vector<T, 3> cross(const Vector<T, 3>& lhs, const Vector<T, 3>& rhs)

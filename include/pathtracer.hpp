@@ -1,7 +1,7 @@
 #pragma once
 
-#include <complex>
 #include "bxdf.hpp"
+#include "complex.hpp"
 #include "emitter.hpp"
 #include "vector.hpp"
 #include "shape.hpp"
@@ -96,7 +96,6 @@ private:
         Vector<T, 3, true> diffuse = integrate<T, 3>(
             [=](const Vector<T, 3>& dir_out)
             {
-                using std::real;
                 Vector<T, 3> orig = hit.point + 1e-3*dir_out;
                 Vector<T, 3, true> brdf_value = internal::eval_bxdf(
                     hit.bxdf, hit.normal, -dir_in, dir_out);

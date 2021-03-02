@@ -1,6 +1,6 @@
 #pragma once
 
-#include <complex>
+#include "complex.hpp"
 #include "constants.hpp"
 #include "random.hpp"
 #include "vector.hpp"
@@ -8,8 +8,6 @@
 namespace drt {
 
 namespace internal {
-
-using std::real;
 
 template <typename T>
 inline void make_frame(Vector<T, 3> normal,
