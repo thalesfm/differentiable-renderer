@@ -26,7 +26,9 @@ public:
      , m_up(up)
     { }
 
-    void look_at(Vector<T, 3> eye, Vector<T, 3> at, Vector<T, 3> up)
+    void look_at(Vector<T, 3> eye,
+                 Vector<T, 3> at,
+                 Vector<T, 3> up = Vector<T, 3>{0, 1, 0})
     {
         m_eye = eye;
         m_forward = normalize(at - eye);
