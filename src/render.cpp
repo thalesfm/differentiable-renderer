@@ -32,16 +32,17 @@ int main(int argc, const char *argv[])
     auto diffuse_red = std::make_shared<DiffuseBxDF<T>>(red);
     auto diffuse_green = std::make_shared<DiffuseBxDF<T>>(green);
     auto diffuse_white = std::make_shared<DiffuseBxDF<T>>(white);
-    auto mirror = std::make_shared<MirrorBxDF<T>>();
+    // auto mirror = std::make_shared<MirrorBxDF<T>>();
+    auto specular_white = std::make_shared<SpecularBxDF<T>>(white, 30);
     auto emitter = std::make_shared<AreaEmitter<T>>(emission);
 
     // Configure scene shapes
-    Sphere<T> sphere_front(Vector<T, 3>{0., 0., 3.}, 1., diffuse_white);
+    Sphere<T> sphere_front(Vector<T, 3>{0., 0., 3.}, 1., specular_white);
     Sphere<T> sphere_back(Vector<T, 3>{-1., 1., 4.5}, 1., diffuse_white);
     Plane<T> left_plane(Vector<T, 3>{-1., 0., 0.}, -3., diffuse_red);
     Plane<T> right_plane(Vector<T, 3>{1., 0., 0.1}, -3., diffuse_green);
-    Plane<T> back_plane(Vector<T, 3>{0., 0., -1.}, -6., mirror);
-    Plane<T> front_plane(Vector<T, 3>{0, 0, 1}, 0, mirror);
+    Plane<T> back_plane(Vector<T, 3>{0., 0., -1.}, -6., diffuse_white);
+    Plane<T> front_plane(Vector<T, 3>{0, 0, 1}, 0, diffuse_white);
     Plane<T> ground_plane(Vector<T, 3>{0., 1., 0.}, -3., diffuse_white);
     Plane<T> ceiling_plane(Vector<T, 3>{0., -1., 0.}, -3., diffuse_white);
     Sphere<T> light(Vector<T, 3>{0., 3., 3.}, 1., nullptr, emitter);
