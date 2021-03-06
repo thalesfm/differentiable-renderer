@@ -111,7 +111,7 @@ struct IntegrateBackward {
 };
 
 template <typename Forward, typename Sampler>
-Vector integrate(Forward forward, Sampler samler, size_t n_samples)
+Vector integrate(Forward forward, Sampler sampler, size_t n_samples)
 {
     Vector result(0);
     for (size_t i = 0; i < n_samples; ++i) {
@@ -122,7 +122,7 @@ Vector integrate(Forward forward, Sampler samler, size_t n_samples)
 }
 ```
 
-Although it takes care of the bias problem, this solution comes at the cost of an increased computational complexity when computing gradients. For this reason, it's usage is not enforced since having truly unbiased estimates is often not required for most optization problems.
+Although it takes care of the bias problem, this solution comes at the cost of an increased computational complexity when computing gradients. For this reason, it's usage is not enforced since having truly unbiased estimates is often not required for most optimization problems.
 
 ## Results
 
@@ -143,6 +143,8 @@ cd build
 cmake ..
 cmake --build .
 ```
+
+After the build is complete, running  `./render -o <filename>` will render the sample scene and output the results to `<filename>` as an EXR file. Rendering resolution and sampling are configurable using command-line arguments (see `./render -h` for more details).
 
 [1]: https://rgl.epfl.ch/publications/NimierDavid2020Radiative "Nimier-David. 2020. Radiative Backpropagation: An Adjoint Method for Lightning-Fast Differentiable Rendering"
 [2]: https://arxiv.org/abs/2006.15059 "Jos Stam. 2020. ComputingLight Transport Gradients using the Adjoint Method"
