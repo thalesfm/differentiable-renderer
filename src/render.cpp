@@ -1,13 +1,13 @@
 #include <stdio.h>
+#include "drt/bxdf.hpp"
+#include "drt/camera.hpp"
+#include "drt/dual.hpp"
+#include "drt/emitter.hpp"
+#include "drt/integrate.hpp"
+#include "drt/pathtracer.hpp"
+#include "drt/shape.hpp"
+#include "drt/vector.hpp"
 #include "args.hpp"
-#include "bxdf.hpp"
-#include "camera.hpp"
-#include "dual.hpp"
-#include "emitter.hpp"
-#include "integrate.hpp"
-#include "pathtracer.hpp"
-#include "shape.hpp"
-#include "vector.hpp"
 #include "write.hpp"
 
 using namespace drt;
@@ -19,8 +19,8 @@ int main(int argc, const char *argv[])
         return EXIT_FAILURE;
     }
 
-    using T = double;
-    // using T = Dual<double>;
+    // using T = double;
+    using T = Dual<double>;
 
     // Configure scene parameters
     Vector<T, 3, true> red(Vector<T, 3>{0.5, 0, 0}, true);
@@ -37,7 +37,7 @@ int main(int argc, const char *argv[])
     auto emitter = std::make_shared<AreaEmitter<T>>(emission);
 
     // Configure scene shapes
-    Sphere<T> sphere_front(Vector<T, 3>{0., 0., 3.}, 1., specular_white);
+    Sphere<T> sphere_front(Vector<T, 3>{0., 0., 3.}, 1., diffuse_white);
     Sphere<T> sphere_back(Vector<T, 3>{-1., 1., 4.5}, 1., diffuse_white);
     Plane<T> left_plane(Vector<T, 3>{-1., 0., 0.}, -3., diffuse_red);
     Plane<T> right_plane(Vector<T, 3>{1., 0., 0.1}, -3., diffuse_green);
@@ -63,15 +63,15 @@ int main(int argc, const char *argv[])
     std::size_t width = args.width;
     std::size_t height = args.height;
     Camera<T> cam(width, height);
-    cam.look_at(Vector<T, 3>{1.5, 1.5, 0}, Vector<T, 3>{0, 0, 3});
+    // cam.look_at(Vector<T, 3>{1.5, 1.5, 0}, Vector<T, 3>{0, 0, 3});
     Vector<double, 3> *img = new Vector<double, 3>[width * height];
 
     // Configure path tracer sampling
     Pathtracer<T> tracer(args.absorb_prob, args.min_bounces);
 
-    // red[0].dual() = 1;
-    // red[1].dual() = 1;
-    // red[2].dual() = 1;
+    red[0].dual() = 1;
+    red[1].dual() = 1;
+    red[2].dual() = 1;
     // Render test scene
     for (std::size_t y = 0; y < cam.height(); ++y) {
         for (std::size_t x = 0; x < cam.width(); ++x) {
@@ -85,11 +85,11 @@ int main(int argc, const char *argv[])
                 // radiance.backward(Vec3(1));
                 // red_grad += red.grad();
             }
-            img[y*width + x] = pixel_radiance / args.samples;
+            // img[y*width + x] = pixel_radiance / args.samples;
             // img[y*width + x] = red_grad / args.samples;
-            // img[y*width + x][0] = pixel_radiance[0].dual() / args.samples;
-            // img[y*width + x][1] = pixel_radiance[1].dual() / args.samples;
-            // img[y*width + x][2] = pixel_radiance[2].dual() / args.samples;
+            img[y*width + x][0] = pixel_radiance[0].dual() / args.samples;
+            img[y*width + x][1] = pixel_radiance[1].dual() / args.samples;
+            img[y*width + x][2] = pixel_radiance[2].dual() / args.samples;
         }
         printf("% 5.2f%%\r", 100. * (y+1) / cam.height());
         fflush(stdout);
