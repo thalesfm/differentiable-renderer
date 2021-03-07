@@ -73,9 +73,9 @@ int main(int argc, const char *argv[])
         for (std::size_t x = 0; x < cam.width(); ++x) {
             Vector<T, 3> pixel_radiance(0);
             for (std::size_t i = 0; i < args.samples; ++i) {
-                Vector<T, 3> dir = cam.sample(x, y);
+                auto [dir, pdf] = cam.sample(x, y);
                 Vector<T, 3, true> radiance = tracer.trace(scene, cam.eye(), dir);
-                pixel_radiance += radiance.detach();
+                pixel_radiance += radiance.detach() / pdf;
 		// Uncomment to compute gradients
                 // radiance.backward(Vec3(1));
             }

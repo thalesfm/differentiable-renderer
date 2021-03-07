@@ -1,5 +1,6 @@
 #pragma once
 
+#include <tuple>
 #include "bxdf.hpp"
 #include "complex.hpp"
 #include "emitter.hpp"
@@ -15,24 +16,23 @@ using Scene = std::vector<Shape<T>*>;
 namespace internal {
 
 template <typename T>
-Vector<T, 3> sample_bxdf(const BxDF<T> *bxdf,
-                         Vector<T, 3> normal,
-                         Vector<T, 3> dir_in,
-                         double& pdf)
+std::tuple<Vector<T, 3>, double> sample_bxdf(
+    const BxDF<T> *bxdf,
+    Vector<T, 3> normal,
+    Vector<T, 3> dir_in)
 {
-    if (bxdf) {
-        return bxdf->sample(normal, dir_in, pdf);
-    } else {
-        pdf = 1;
-        return Vector<T, 3>(0);
-    }
+    if (bxdf)
+        return bxdf->sample(normal, dir_in);
+    else
+        return std::make_tuple(Vector<T, 3>(0), 1);
 }
 
 template <typename T>
-Vector<T, 3, true> eval_bxdf(const BxDF<T> *bxdf,
-                             Vector<T, 3> normal,
-                             Vector<T, 3> dir_in,
-                             Vector<T, 3> dir_out)
+Vector<T, 3, true> eval_bxdf(
+    const BxDF<T> *bxdf,
+    Vector<T, 3> normal,
+    Vector<T, 3> dir_in,
+    Vector<T, 3> dir_out)
 {
     if (bxdf)
         return (*bxdf)(normal, dir_in, dir_out);
@@ -104,9 +104,9 @@ private:
                 double cos_theta = real(dot(hit.normal, dir_out));
                 return brdf_value * radiance * cos_theta;
             },
-            [=](double& pdf)
+            [=]()
             {
-                return internal::sample_bxdf(hit.bxdf, hit.normal, -dir_in, pdf);
+                return internal::sample_bxdf(hit.bxdf, hit.normal, -dir_in);
             },
             1,
             false

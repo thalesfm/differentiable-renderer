@@ -16,19 +16,6 @@ namespace drt {
 template <typename T, std::size_t N, bool Autograd = false>
 class Vector;
 
-using Vec1 = Vector<double, 1>;
-using Vec2 = Vector<double, 2>;
-using Vec3 = Vector<double, 3>;
-using Var1 = Vector<double, 1, true>;
-using Var2 = Vector<double, 2, true>;
-using Var3 = Vector<double, 3, true>;
-using Vec1f = Vector<float, 1>;
-using Vec2f = Vector<float, 2>;
-using Vec3f = Vector<float, 3>;
-using Var1f = Vector<float, 1, true>;
-using Var2f = Vector<float, 2, true>;
-using Var3f = Vector<float, 3, true>;
-
 template <typename T, std::size_t N>
 class Vector<T, N> {
 public:
@@ -38,7 +25,9 @@ public:
     Vector() = default;
 
     explicit Vector(T value)
-    { m_data.fill(value); }
+    {
+        m_data.fill(value);
+    }
 
     Vector(std::initializer_list<T> init)
     {
@@ -49,25 +38,39 @@ public:
     }
 
     T& operator[](std::size_t pos)
-    { return m_data[pos]; }
+    {
+        return m_data[pos];
+    }
 
     const T& operator[](std::size_t pos) const
-    { return m_data[pos]; }
+    {
+        return m_data[pos];
+    }
 
     iterator begin()
-    { return m_data.begin(); }
+    {
+        return m_data.begin();
+    }
 
     const_iterator begin() const
-    { return m_data.begin(); }
+    {
+        return m_data.begin();
+    }
 
     iterator end()
-    { return m_data.end(); }
+    {
+        return m_data.end();
+    }
 
     const_iterator end() const
-    { return m_data.end(); }
+    {
+        return m_data.end();
+    }
 
     constexpr std::size_t size() const
-    { return N; }
+    {
+        return N;
+    }
 
     Vector& operator+=(const Vector& rhs)
     {
@@ -122,15 +125,22 @@ class AutogradNode : public Vector<T, N> {
 public:
     using Vector<T, N>::Vector;
 
-    AutogradNode(const Vector<T, N>& v) : Vector<T, N>(v) { }
+    AutogradNode(const Vector<T, N>& v)
+      : Vector<T, N>(v)
+    { }
 
-    virtual ~AutogradNode() { }
+    virtual ~AutogradNode()
+    { }
 
     virtual Vector<T, N>& grad()
-    { throw std::runtime_error("Vector has no gradient (not a variable)"); }
+    {
+        throw std::runtime_error("Vector has no gradient (not a variable)");
+    }
 
     virtual const Vector<T, N>& grad() const
-    { throw std::runtime_error("Vector has no gradient (not a variable)"); }
+    {
+        throw std::runtime_error("Vector has no gradient (not a variable)");
+    }
 
     virtual bool requires_grad() const = 0;
 
@@ -140,12 +150,17 @@ public:
 template <typename T, std::size_t N>
 class ConstantNode : public AutogradNode<T, N> {
 public:
-    ConstantNode(const Vector<T, N>& v) : AutogradNode<T, N>(v) { }
+    ConstantNode(const Vector<T, N>& v)
+      : AutogradNode<T, N>(v)
+    { }
 
     bool requires_grad() const override
-    { return false; }
+    {
+        return false;
+    }
 
-    void backward(const Vector<T, N>& grad) const override { }
+    void backward(const Vector<T, N>& grad) const override
+    { }
 };
 
 template <typename T, std::size_t N>
@@ -154,16 +169,24 @@ public:
     using AutogradNode<T, N>::AutogradNode;
 
     Vector<T, N>& grad() override
-    { return m_grad; }
+    {
+        return m_grad;
+    }
 
     const Vector<T, N>& grad() const override
-    { return m_grad; }
+    {
+        return m_grad;
+    }
 
     bool requires_grad() const override
-    { return true; }
+    {
+        return true;
+    }
 
     void backward(const Vector<T, N>& grad) const override
-    { m_grad += grad; }
+    {
+        m_grad += grad;
+    }
 
 private:
     mutable Vector<T, N> m_grad;
@@ -173,16 +196,21 @@ template <typename T, std::size_t N, typename Backward>
 class BackwardNode : public AutogradNode<T, N> {
 public:
     BackwardNode(const Vector<T, N>& v, const Backward& backward)
-      : AutogradNode<T, N>(v), m_backward(backward) { }
+      : AutogradNode<T, N>(v), m_backward(backward)
+    { }
 
     bool requires_grad() const override
-    { return true; }
+    {
+        return true;
+    }
 
     void backward(const Vector<T, N>& grad) const override
-    { m_backward(grad); }
+    {
+        m_backward(grad);
+    }
 
 private:
-    typename std::decay<Backward>::type m_backward;
+    typename std::decay_t<Backward> m_backward;
 };
 
 } // namespace internal
@@ -190,15 +218,13 @@ private:
 template <typename T, std::size_t N>
 class Vector<T, N, true> {
 public:
-    // Default constructor assumes requires_grad = true
-    // due to ambiguities related to other constructors
-    Vector() : Vector(Vector<T, N>(), true) { }
-
     explicit Vector(T value, bool requires_grad = false)
-      : Vector(Vector<T, N>(value), requires_grad) { }
+      : Vector(Vector<T, N>(value), requires_grad)
+    { }
 
     Vector(std::initializer_list<T> init, bool requires_grad = false)
-      : Vector(Vector<T, N>(init), requires_grad) { }
+      : Vector(Vector<T, N>(init), requires_grad)
+    { }
 
     Vector(const Vector<T, N>& v, bool requires_grad = false)
     {
@@ -210,91 +236,187 @@ public:
 
     template <typename Backward>
     Vector(const Vector<T, N>& v, const Backward& backward)
-      : m_ptr(new internal::BackwardNode<T, N, Backward>(v, backward)) { }
+      : m_ptr(new internal::BackwardNode<T, N, Backward>(v, backward))
+    { }
 
-    // WARN: Potentially unsafe!
     T& operator[](std::size_t pos)
-    { return (*m_ptr)[pos]; }
+    {
+        return (*m_ptr)[pos];
+    }
 
     const T& operator[](std::size_t pos) const
-    { return (*m_ptr)[pos]; }
+    {
+        return (*m_ptr)[pos];
+    }
 
     constexpr std::size_t size() const
-    { return N; }
+    {
+        return N;
+    }
 
-    // WARN: Potentially unsafe!
     Vector<T, N>& detach()
-    { return *m_ptr; }
+    {
+        return *m_ptr;
+    }
 
     const Vector<T, N>& detach() const
-    { return *m_ptr; }
+    {
+        return *m_ptr;
+    }
 
     Vector<T, N>& grad()
-    { return m_ptr->grad(); }
+    {
+        return m_ptr->grad();
+    }
 
     const Vector<T, N>& grad() const
-    { return m_ptr->grad(); }
+    {
+        return m_ptr->grad();
+    }
 
     bool requires_grad() const
-    { return m_ptr->requires_grad(); }
+    {
+        return m_ptr->requires_grad();
+    }
 
     void backward(const Vector<T, N>& grad) const
-    { m_ptr->backward(grad); }
+    {
+        m_ptr->backward(grad);
+    }
 
     Vector<T, N, true>& operator+=(const Vector<T, N, true>& rhs)
-    { return *this = *this + rhs; }
+    {
+        return *this = *this + rhs;
+    }
 
     Vector<T, N, true>& operator-=(const Vector<T, N, true>& rhs)
-    { return *this = *this - rhs; }
+    {
+        return *this = *this - rhs;
+    }
 
     Vector<T, N, true>& operator*=(const Vector<T, N, true>& rhs)
-    { return *this = *this * rhs; }
+    {
+        return *this = *this * rhs;
+    }
 
     Vector<T, N, true>& operator*=(T s)
-    { return *this = *this * s; }
+    {
+        return *this = *this * s;
+    }
 
     Vector<T, N, true>& operator/=(const Vector<T, N, true>& rhs)
-    { return *this = *this / rhs; }
+    {
+        return *this = *this / rhs;
+    }
 
     Vector<T, N, true>& operator/=(T s)
-    { return *this = *this / s; }
+    {
+        return *this = *this / s;
+    }
 
 private:
     std::shared_ptr<internal::AutogradNode<T, N>> m_ptr;
 };
 
-namespace internal {
+template <typename T, std::size_t N, bool Ag,
+          typename = typename std::enable_if_t<std::is_convertible_v<int, T>>>
+inline Vector<T, N, Ag> operator-(const Vector<T, N, Ag>& v)
+{
+    return -1 * v;
+}
+
+template <typename T, std::size_t N>
+inline Vector<T, N> operator+(Vector<T, N> lhs, const Vector<T, N>& rhs)
+{
+    return lhs += rhs;
+}
+
+template <typename T, std::size_t N>
+inline Vector<T, N> operator-(Vector<T, N> lhs, const Vector<T, N>& rhs)
+{
+    return lhs -= rhs;
+}
+
+template <typename T, std::size_t N>
+inline Vector<T, N> operator*(Vector<T, N> lhs, const Vector<T, N>& rhs)
+{
+    return lhs *= rhs;
+}
+
+template <typename T, std::size_t N, typename S,
+          typename = typename std::enable_if_t<std::is_convertible_v<S, T>>>
+inline Vector<T, N> operator*(Vector<T, N> v, S s)
+{
+    return v *= s;
+}
+
+template <typename T, std::size_t N, typename S,
+          typename = typename std::enable_if_t<std::is_convertible_v<S, T>>>
+inline Vector<T, N> operator*(S s, Vector<T, N> v)
+{
+    return v *= s;
+}
+
+template <typename T, std::size_t N>
+inline Vector<T, N> operator/(Vector<T, N> lhs, const Vector<T, N>& rhs)
+{
+    return lhs /= rhs;
+}
+
+template <typename T, std::size_t N, typename S,
+          typename = typename std::enable_if_t<std::is_convertible_v<S, T>>>
+inline Vector<T, N> operator/(Vector<T, N> v, S s)
+{
+    return v /= s;
+}
 
 template <typename T, std::size_t N>
 inline Vector<T, N>& detach(Vector<T, N>& v)
-{ return v; }
+{
+    return v;
+}
 
 template <typename T, std::size_t N>
 inline const Vector<T, N>& detach(const Vector<T, N>& v)
-{ return v; }
+{
+    return v;
+}
 
 template <typename T, std::size_t N>
 inline Vector<T, N>& detach(Vector<T, N, true>& v)
-{ return v.detach(); }
+{
+    return v.detach();
+}
 
 template <typename T, std::size_t N>
 inline const Vector<T, N>& detach(const Vector<T, N, true>& v)
-{ return v.detach(); }
+{
+    return v.detach();
+}
 
 template <typename T, std::size_t N>
 inline constexpr bool requires_grad(const Vector<T, N>& v)
-{ return false; }
+{
+    return false;
+}
 
 template <typename T, std::size_t N>
 inline bool requires_grad(const Vector<T, N, true>& v)
-{ return v.requires_grad(); }
+{
+    return v.requires_grad();
+}
 
 template <typename T, std::size_t N>
-inline void backward(Vector<T, N>& v, const Vector<T, N>& grad) { }
+inline void backward(Vector<T, N>& v, const Vector<T, N>& grad)
+{ }
 
 template <typename T, std::size_t N>
 inline void backward(Vector<T, N, true>& v, const Vector<T, N>& grad)
-{ v.backward(grad); }
+{
+    v.backward(grad);
+}
+
+namespace internal {
 
 template <typename T, std::size_t N>
 struct AddBackward {
@@ -332,7 +454,9 @@ struct MulBackward {
 template <typename T, std::size_t N>
 struct ScalarMulBackward {
     void operator()(const Vector<T, N>& grad) const
-    { v.backward(s * grad); }
+    {
+        v.backward(s * grad);
+    }
 
     T s;
     Vector<T, N, true> v;
@@ -352,7 +476,9 @@ struct DivBackward {
 template <typename T, std::size_t N>
 struct ScalarDivBackward {
     void operator()(const Vector<T, N>& grad) const
-    { v.backward(grad / s); }
+    {
+        v.backward(grad / s);
+    }
 
     Vector<T, N, true> v;
     T s;
@@ -360,113 +486,75 @@ struct ScalarDivBackward {
 
 } // namespace internal
 
-template <typename T, std::size_t N, bool Ag>
-inline Vector<T, N, Ag> operator-(const Vector<T, N, Ag>& v)
-{ return -1 * v; }
-
-template <typename T, std::size_t N>
-inline Vector<T, N> operator+(const Vector<T, N>& lhs, const Vector<T, N>& rhs)
-{ return Vector<T, N>(lhs) += rhs; }
-
 template <typename T, std::size_t N, bool Ag1, bool Ag2,
-          typename = typename std::enable_if<Ag1 || Ag2>::type>
+          typename = typename std::enable_if_t<Ag1 || Ag2>>
 inline Vector<T, N, true> operator+(const Vector<T, N, Ag1>& lhs,
                                     const Vector<T, N, Ag2>& rhs)
 {
-    auto r = internal::detach(lhs) + internal::detach(rhs);
-    if (!internal::requires_grad(lhs) && !internal::requires_grad(rhs))
+    auto r = detach(lhs) + detach(rhs);
+    if (!requires_grad(lhs) && !requires_grad(rhs))
         return r;
     return Vector<T, N, true>(r, internal::AddBackward<T, N>{lhs, rhs});
 }
 
-template <typename T, std::size_t N>
-inline Vector<T, N> operator-(const Vector<T, N>& lhs, const Vector<T, N>& rhs)
-{ return Vector<T, N>(lhs) -= rhs; }
-
 template <typename T, std::size_t N, bool Ag1, bool Ag2,
-          typename = typename std::enable_if<Ag1 || Ag2>::type>
+          typename = typename std::enable_if_t<Ag1 || Ag2>>
 inline Vector<T, N, true> operator-(const Vector<T, N, Ag1>& lhs,
                                     const Vector<T, N, Ag2>& rhs)
 {
-    auto r = internal::detach(lhs) - internal::detach(rhs);
-    if (!internal::requires_grad(lhs) && !internal::requires_grad(rhs))
+    auto r = detach(lhs) - detach(rhs);
+    if (!requires_grad(lhs) && !requires_grad(rhs))
         return r;
     return Vector<T, N, true>(r, internal::SubBackward<T, N>{lhs, rhs});
 }
 
-template <typename T, std::size_t N>
-inline Vector<T, N> operator*(const Vector<T, N>& lhs, const Vector<T, N>& rhs)
-{ return Vector<T, N>(lhs) *= rhs; }
-
 template <typename T, std::size_t N, bool Ag1, bool Ag2,
-          typename = typename std::enable_if<Ag1 || Ag2>::type>
+          typename = typename std::enable_if_t<Ag1 || Ag2>>
 inline Vector<T, N, true> operator*(const Vector<T, N, Ag1>& lhs,
                                     const Vector<T, N, Ag2>& rhs)
 {
-    auto r = internal::detach(lhs) * internal::detach(rhs);
-    if (!internal::requires_grad(lhs) && !internal::requires_grad(rhs))
+    auto r = detach(lhs) * detach(rhs);
+    if (!requires_grad(lhs) && !requires_grad(rhs))
         return r;
     return Vector<T, N, true>(r, internal::MulBackward<T, N>{lhs, rhs});
 }
 
 template <typename T, std::size_t N, typename S,
-          typename = typename std::enable_if<
-              std::is_convertible<S, T>::value>::type>
-inline Vector<T, N> operator*(const Vector<T, N>& v, S s)
-{ return Vector<T, N>(v) *= s; }
-
-template <typename T, std::size_t N, typename S,
-          typename = typename std::enable_if<
-              std::is_convertible<S, T>::value>::type>
-inline Vector<T, N> operator*(S s, const Vector<T, N>& v)
-{ return Vector<T, N>(v) *= s; }
-
-template <typename T, std::size_t N, typename S,
-          typename = typename std::enable_if<
-              std::is_convertible<S, T>::value>::type>
+          typename = typename std::enable_if_t<std::is_convertible_v<S, T>>>
 inline Vector<T, N, true> operator*(Vector<T, N, true> v, S s)
-{ return s * v; }
-
-template <typename T, std::size_t N, typename S,
-          typename = typename std::enable_if<
-              std::is_convertible<S, T>::value>::type>
-inline Vector<T, N, true> operator*(S s, Vector<T, N, true> v)
 {
-    Vector<T, N> r = s * v.detach();
-    if (!v.requires_grad())
-        return r;
-    return Vector<T, N, true>(r, internal::ScalarMulBackward<T, N>{T(s), v});
+    return s * v;
 }
 
-template <typename T, std::size_t N>
-inline Vector<T, N> operator/(const Vector<T, N>& lhs, const Vector<T, N>& rhs)
-{ return Vector<T, N>(lhs) /= rhs; }
+template <typename T, std::size_t N, typename S,
+          typename = typename std::enable_if_t<std::is_convertible_v<S, T>>>
+inline Vector<T, N, true> operator*(S s, Vector<T, N, true> v)
+{
+    auto r = s * v.detach();
+    if (!v.requires_grad())
+        return r;
+    return Vector<T, N, true>(r, internal::ScalarMulBackward<T, N>{s, v});
+}
 
 template <typename T, std::size_t N, bool Ag1, bool Ag2,
-          typename = typename std::enable_if<Ag1 || Ag2>::type>
+          typename = typename std::enable_if_t<Ag1 || Ag2>>
 inline Vector<T, N, true> operator/(const Vector<T, N, Ag1>& lhs,
                                     const Vector<T, N, Ag2>& rhs)
 {
-    auto r = internal::detach(lhs) / internal::detach(rhs);
-    if (!internal::requires_grad(lhs) && !internal::requires_grad(rhs))
+    auto r = detach(lhs) / detach(rhs);
+    if (!requires_grad(lhs) && !requires_grad(rhs))
         return r;
     return Vector<T, N, true>(r, internal::DivBackward<T, N>{lhs, rhs});
 }
 
 template <typename T, std::size_t N, typename S,
-          typename = typename std::enable_if<std::is_convertible<S, T>::value>::type>
-inline Vector<T, N> operator/(const Vector<T, N>& v, S s)
-{ return Vector<T, N>(v) /= s; }
-
-template <typename T, std::size_t N, typename S,
-          typename = typename std::enable_if<
-              std::is_convertible<S, T>::value>::type>
+          typename = typename std::enable_if_t<std::is_convertible_v<S, T>>>
 inline Vector<T, N, true> operator/(Vector<T, N, true> v, S s)
 {
-    Vector<T, N> r = v.detach() / s;
+    auto r = v.detach() / s;
     if (!v.requires_grad())
         return r;
-    return Vector<T, N, true>(r, internal::ScalarDivBackward<T, N>{v, T(s)});
+    return Vector<T, N, true>(r, internal::ScalarDivBackward<T, N>{v, s});
 }
 
 template <typename T, std::size_t N, bool Ag>
@@ -496,7 +584,6 @@ inline T norm(const Vector<T, N>& v)
     return sqrt(real(dot(v, v)));
 }
 
-// WARN: No checks for when the norm is zero!
 template <typename T, std::size_t N>
 inline Vector<T, N> normalize(const Vector<T, N>& v)
 {
@@ -513,4 +600,10 @@ inline Vector<T, 3> cross(const Vector<T, 3>& lhs, const Vector<T, 3>& rhs)
     return r;
 }
 
+template <typename T, std::size_t N>
+inline Vector<T, N> reflect(const Vector<T, N>& v, const Vector<T, N>& n)
+{
+    return -v + 2*real(dot(n, v))*n;
 }
+
+} // namespace drt

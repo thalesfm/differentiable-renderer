@@ -1,12 +1,12 @@
 #pragma once
 
 #include <cstddef>
+#include <tuple>
 #include "random.hpp"
 #include "vector.hpp"
 
 namespace drt {
 
-// TODO: Remove default argument magic numbers
 template <typename T>
 class Camera {
 public:
@@ -14,8 +14,8 @@ public:
            std::size_t height,
            double vfov = 1.3963,
            Vector<T, 3> eye = Vector<T, 3>(0),
-           Vector<T, 3> forward = Vector<T, 3>{0, 0, 1},
-           Vector<T, 3> right = Vector<T, 3>{-1, 0, 0},
+           Vector<T, 3> forward = Vector<T, 3>{0, 0, -1},
+           Vector<T, 3> right = Vector<T, 3>{1, 0, 0},
            Vector<T, 3> up = Vector<T, 3>{0, 1, 0})
      : m_width(width)
      , m_height(height)
@@ -48,7 +48,7 @@ public:
     double aspect() const
     { return double(m_width) / m_height; }
 
-    Vector<T, 3> sample(std::size_t x, std::size_t y) const
+    std::tuple<Vector<T, 3>, double> sample(std::size_t x, std::size_t y) const
     {
         double s = (x + random::uniform()) / m_width;
         double t = (y + random::uniform()) / m_height;
@@ -56,7 +56,7 @@ public:
         dir += (2.*s - 1.) * aspect() * tan(m_vfov / 2.) * m_right;
         dir += (2.*t - 1.) * tan(m_vfov / 2.) * -m_up;
         dir = normalize(dir);
-        return dir;
+        return std::make_tuple(dir, 1);
     }
 
 private:
@@ -69,4 +69,4 @@ private:
     Vector<T, 3> m_up;
 };
 
-}
+} // namespace drt

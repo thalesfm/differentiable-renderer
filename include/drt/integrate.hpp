@@ -13,8 +13,7 @@ struct IntegrateBackward {
     void operator()(const Vector<T, N>& grad) const
     {
         for (std::size_t i = 0; i < n_samples; ++i) {
-            double pdf;
-            Vector<T, N> sample = sampler(pdf);
+            auto [sample, pdf] = sampler();
             forward(sample).backward(grad / pdf);
         }
     }
@@ -31,8 +30,7 @@ inline Vector<T, N, true> integrate_biased(const Forward& forward,
 {
     Vector<T, N, true> r(0);
     for (std::size_t i = 0; i < n_samples; ++i) {
-        double pdf;
-        Vector<T, N> sample = sampler(pdf);
+        auto [sample, pdf] = sampler();
         r += forward(sample) / pdf;
     }
     return r;
@@ -45,8 +43,7 @@ inline Vector<T, N, true> integrate_unbiased(const Forward& forward,
 {
     Vector<T, N> r(0);
     for (std::size_t i = 0; i < n_samples; ++i) {
-        double pdf;
-        Vector<T, N> sample = sampler(pdf);
+        auto [sample, pdf] = sampler();
         r += forward(sample).detach() / pdf;
     }
     return Vector<T, N, true>(r,
