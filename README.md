@@ -4,7 +4,7 @@
 
 ## About
 
-A simple differentiable path tracer based on the radiative backpropagation algorithm as proposed by Nimier-David et al. [\[2020\]][1] and the adjoint method for light transport by Jos Stam [\[2020\]][2]. Written for educational purposes, this aims to be an understandable, yet reasonably efficient implementation of the algorithm. This repository includes both the base library as well as a couple of sample applications.
+A simple differentiable path tracer based on the radiative backpropagation algorithm as proposed by Nimier-David et al. [\[2020\]][1] and the adjoint method for light transport by Jos Stam [\[2020\]][2]. Written for educational purposes, this aims to be an understandable, yet reasonably efficient implementation of the algorithm. This repository includes both the base library as well as a sample application.
 
 ## Background
 
