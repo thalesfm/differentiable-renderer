@@ -5,6 +5,7 @@
 #include "emitter.hpp"
 #include "vector.hpp"
 #include "shape.hpp"
+#include <vector>
 
 namespace drt {
 
