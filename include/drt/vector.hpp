@@ -484,18 +484,9 @@ inline std::ostream& operator<<(std::ostream& os, const Vector<T, N, Ag>& v)
 }
 
 template <typename T, std::size_t N>
-inline Vector<T, N> conj(const Vector<T, N>& v)
-{
-    Vector<T, N> r = v;
-    std::transform(r.begin(), r.end(), r.begin(),
-      [](T x) { return conj(x); });
-    return r;
-}
-
-template <typename T, std::size_t N>
 inline T dot(const Vector<T, N>& lhs, const Vector<T, N>& rhs)
 {
-    Vector<T, N> tmp = conj(lhs) * rhs;
+    Vector<T, N> tmp = lhs * rhs;
     return std::accumulate(tmp.begin(), tmp.end(), T());
 }
 
