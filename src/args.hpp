@@ -37,7 +37,7 @@ inline bool parse_args(int argc, const char *const *argv, Args *args)
         "n", "samples",
         "Number of samples per pixel",
         false,
-        4,
+        100,
         "integer"
     );
     cmd.add(samples_arg);
