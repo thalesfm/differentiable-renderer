@@ -9,7 +9,6 @@
 #include <numeric>
 #include <typeinfo>
 #include <type_traits>
-#include "complex.hpp"
 
 namespace drt {
 
@@ -581,7 +580,7 @@ inline T dot(const Vector<T, N>& lhs, const Vector<T, N>& rhs)
 template <typename T, std::size_t N>
 inline T norm(const Vector<T, N>& v)
 {
-    return sqrt(real(dot(v, v)));
+    return sqrt(dot(v, v));
 }
 
 template <typename T, std::size_t N>
@@ -603,7 +602,7 @@ inline Vector<T, 3> cross(const Vector<T, 3>& lhs, const Vector<T, 3>& rhs)
 template <typename T, std::size_t N>
 inline Vector<T, N> reflect(const Vector<T, N>& v, const Vector<T, N>& n)
 {
-    return -v + 2*real(dot(n, v))*n;
+    return -v + 2*dot(n, v)*n;
 }
 
 } // namespace drt

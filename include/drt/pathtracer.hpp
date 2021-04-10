@@ -2,7 +2,6 @@
 
 #include <tuple>
 #include "bxdf.hpp"
-#include "complex.hpp"
 #include "emitter.hpp"
 #include "vector.hpp"
 #include "shape.hpp"
@@ -101,7 +100,7 @@ private:
                 Vector<T, 3, true> brdf_value = internal::eval_bxdf(
                     hit.bxdf, hit.normal, -dir_in, dir_out);
                 Vector<T, 3, true> radiance = trace(scene, orig, dir_out, depth+1);
-                double cos_theta = real(dot(hit.normal, dir_out));
+                double cos_theta = dot(hit.normal, dir_out);
                 return brdf_value * radiance * cos_theta;
             },
             [=]()

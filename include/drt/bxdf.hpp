@@ -3,7 +3,6 @@
 #include <array>
 #include <memory>
 #include <tuple>
-#include "complex.hpp"
 #include "constants.hpp"
 #include "random.hpp"
 #include "vector.hpp"
@@ -33,7 +32,7 @@ inline std::array<Vector<T, 3>, 3> make_frame(const Vector<T, 3>& normal)
     Vector<T, 3> e1 {1., 0., 0.};
     Vector<T, 3> e2 {0., 1., 0.};
     Vector<T, 3> tangent;
-    if (std::abs(real(dot(e1, normal))) < std::abs(real(dot(e2, normal))))
+    if (std::abs(dot(e1, normal)) < std::abs(dot(e2, normal)))
         tangent = normalize(e1 - normal*dot(e1, normal));
     else
         tangent = normalize(e2 - normal*dot(e2, normal));
@@ -97,7 +96,7 @@ public:
         const Vector<T, 3>& dir_out) const override
     {
         Vector<T, 3> halfway = normalize(dir_in + dir_out);
-        double cos_theta = real(dot(normal, halfway));
+        double cos_theta = dot(normal, halfway);
         double sin_theta = sqrt(1 - cos_theta*cos_theta);
         double factor = (m_exponent + 2) / (2 * pi)
             * pow(cos_theta, m_exponent) * sin_theta;
@@ -112,7 +111,7 @@ public:
         double phi = 2 * pi * random::uniform();
         auto frame = internal::make_frame(normal);
         auto halfway = internal::angle_to_dir(theta, phi, frame);
-        if (real(dot(halfway, dir_in)) < 0)
+        if (dot(halfway, dir_in) < 0)
             halfway = reflect(halfway, normal);
         auto dir = reflect(dir_in, halfway);
         double pdf = (m_exponent + 2) / (2 * pi) *
@@ -132,7 +131,7 @@ public:
         const Vector<T, 3>& dir_in,
         const Vector<T, 3>& dir_out) const override
     {
-        double cos_theta = real(dot(normal, dir_out));
+        double cos_theta = dot(normal, dir_out);
         return 1 / cos_theta;
     }
 

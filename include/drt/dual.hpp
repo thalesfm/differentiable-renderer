@@ -164,12 +164,6 @@ inline T real(const Dual<T>& n)
 }
 
 template <typename T>
-inline Dual<T> conj(const Dual<T>& n)
-{
-    return n;
-}
-
-template <typename T>
 inline Dual<T> sqrt(const Dual<T>& n)
 {
     T real = std::sqrt(n.real());
