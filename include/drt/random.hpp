@@ -6,7 +6,7 @@ namespace drt { namespace random {
 
 inline double uniform()
 {
-    return double(rand()) / (RAND_MAX - 1);
+    return double(rand()) / RAND_MAX;
 }
 
 } }
