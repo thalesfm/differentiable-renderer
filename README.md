@@ -133,6 +133,12 @@ The resulting gradients obtained from this implementation have been experimental
 
 _Gradients of the pixel colors in a sample scene with respect to the parameter controlling the color of the left wall. Notice how the gradient values seem to be emitted from the wall and scatter around the scene much like light would. Results obtained using the radiative backpropagation algorithm (left) and forward mode automatic differentiation (right)._
 
+## Limitations
+
+It is important to note that this implementation, as well as the methods which it is based on, is not concerned with handling the visibility-related discontinuities which may arise during the rendering process. As such, it _will not_ compute the correct gradients w.r.t. parameters related to scene geometry such as object positions, rotations, etc. It will, however, compute accurate gradients w.r.t. parameters related to shading such as diffuse color, specularity, and emission strength\*. With that said, the techniques required for handling such discontinuities are largely orthogonal to the methods implemented here. Therefore, extending this implementation to handle such discontinuities should be feasible.
+
+\*Assuming no discontinuities are present in the BRDFs themselves.
+
 ## Building
 
 The bulk of this project has been implemented in C++11 as a header-only library with no external dependencies. Therefore, the relevant headers may be included directly from a source file and compiled without the need for linking. This repository also features a command-line tool for rendering a sample scene as a usage example. Building the command-line tool requires CMake (>=3.5) and a couple of dependencies (these have already been included as git submodules, so make sure to clone them as well). Simply running the following commands in the project's root directory should take care of compiling the system:
