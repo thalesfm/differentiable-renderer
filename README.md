@@ -14,9 +14,9 @@ Rendering algorithms, whether based on rasterization or path tracing, are tipica
 
 Physically-based rendering algorithms model the propagation of light in a scene via the the so-called "light transport" equations. These equations (defined below) describe how light radiates in straight lines between surface points and then scatters in an energy-conserving manner. The rendering process, in effect, consists of finding approximate solutions to these equations in order to estimate the ammount of light arriving at a particular sensor (such as the pixels in a camera). This is done by using Monte Carlo integration via the path tracing algorithm, in which light paths are randomly sampled throughout the scene and their radiance determined according these same equations.
 
-![Transport equation](docs/images/transport-equation.gif)
+![Transport equation](docs/images/transport-equation.png)
 
-![Scattering equation](docs/images/scattering-equation.gif)
+![Scattering equation](docs/images/scattering-equation.png)
 
 (Here `(p, w)` defines a ray with origin `p` and direction `w`. `Li`, `Lo`, and `Le` represent the incoming, outgoing, and emitted radiances respectively. `f` is the bidirectional reflectance function (BRDF) and `t` computes the first intersection of a ray.)
 
@@ -24,9 +24,9 @@ Physically-based rendering algorithms model the propagation of light in a scene 
 
 By taking the derivative of these equations with respect to the scene parameters (details in the aforementioned papers), we arrive at a formulation for the gradient. Here we discover that, perhaps surprisingly, these new "adjoint transport" equations are in fact very similar to the original light transport equations which we started with. Therefore, it stands to reason that we may solve these equations by using a process analogous to the path tracing algorithm. This key insight is what enables us to model the propagation of gradients throughout the scene in similar fashion to how we would with light in a process called "radiative backpropagation."
 
-![Diff. transport equation](docs/images/diff-transport-equation.gif)
+![Diff. transport equation](docs/images/diff-transport-equation.png)
 
-![Diff. scattering equation](docs/images/diff-scattering-equation.gif)
+![Diff. scattering equation](docs/images/diff-scattering-equation.png)
 
 (The above variables hold the same meaning as before while `x` is a vector representing the scene parameters.)
 
