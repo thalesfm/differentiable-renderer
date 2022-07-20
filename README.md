@@ -14,21 +14,32 @@ Rendering algorithms, whether based on rasterization or path tracing, are tipica
 
 Physically-based rendering algorithms model the propagation of light in a scene via the the so-called "light transport" equations. These equations (defined below) describe how light radiates in straight lines between surface points and then scatters in an energy-conserving manner. The rendering process, in effect, consists of finding approximate solutions to these equations in order to estimate the ammount of light arriving at a particular sensor (such as the pixels in a camera). This is done by using Monte Carlo integration via the path tracing algorithm, in which light paths are randomly sampled throughout the scene and their radiance determined according these same equations.
 
-![Transport equation](docs/images/transport-equation.png)
+$$
+\begin{align*}
+	L_i(\mathbf{p}, \boldsymbol{\omega}) &= L_o(t(\mathbf{p}, \boldsymbol{\omega}), -\boldsymbol{\omega}) \\
+	L_o(\mathbf{p}, \boldsymbol{\omega}) &= L_e(\mathbf{p}, \boldsymbol{\omega}) +
+	  \int_{S^2} L_i(\mathbf{p}, \boldsymbol{\omega}^\prime)\ f(\mathbf{p}, \boldsymbol{\omega}, \boldsymbol{\omega}^\prime)\ \mathrm{d}\boldsymbol{\omega}^\prime
+\end{align*}
+$$
 
-![Scattering equation](docs/images/scattering-equation.png)
-
-(Here `(p, w)` defines a ray with origin `p` and direction `w`. `Li`, `Lo`, and `Le` represent the incoming, outgoing, and emitted radiances respectively. `f` is the bidirectional reflectance function (BRDF) and `t` computes the first intersection of a ray.)
+(Here $(\mathbf{p}, \boldsymbol{\omega})$ defines a ray with origin $\mathbf{p}$ and direction $\boldsymbol{\omega}$; $L_i$, $L_o$, and $L_e$ represent the incoming, outgoing, and emitted radiances respectively. $f$ is the bidirectional reflectance function (BRDF) and $t$ computes the first intersection of a ray.)
 
 ### Radiative Backpropagation
 
 By taking the derivative of these equations with respect to the scene parameters (details in the aforementioned papers), we arrive at a formulation for the gradient. Here we discover that, perhaps surprisingly, these new "adjoint transport" equations are in fact very similar to the original light transport equations which we started with. Therefore, it stands to reason that we may solve these equations by using a process analogous to the path tracing algorithm. This key insight is what enables us to model the propagation of gradients throughout the scene in similar fashion to how we would with light in a process called "radiative backpropagation."
 
-![Diff. transport equation](docs/images/diff-transport-equation.png)
+$$
+\begin{align*}
+	\partial_{\mathbf{x}} L_i(\mathbf{p}, \boldsymbol{\omega})
+	    &= \partial_{\mathbf{x}} L_o(t(\mathbf{p}, \boldsymbol{\omega}), -\boldsymbol{\omega}) \\
+	\partial_{\mathbf{x}} L_o(\mathbf{p}, \boldsymbol{\omega})
+	    &= \partial_{\mathbf{x}} L_e(\mathbf{p}, \boldsymbol{\omega}) \\
+	    &+ \int_{S^2} \Big[\ \partial_\mathbf{x} L_i(\mathbf{p}, \boldsymbol{\omega}^\prime)\ f(\mathbf{p}, \boldsymbol{\omega}, \boldsymbol{\omega}^\prime)
+	        + L_i(\mathbf{p}, \boldsymbol{\omega}^\prime)\ \partial_{\mathbf{x}} f(\mathbf{p}, \boldsymbol{\omega}, \boldsymbol{\omega}^\prime)\ \Big]\ \mathrm{d} \boldsymbol{\omega}^\prime
+\end{align*}
+$$
 
-![Diff. scattering equation](docs/images/diff-scattering-equation.png)
-
-(The above variables hold the same meaning as before while `x` is a vector representing the scene parameters.)
+(The above variables hold the same meaning as before while $\mathbf{x}$ is a vector representing the scene parameters.)
 
 ## Implementation
 
